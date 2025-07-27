@@ -1,0 +1,96 @@
+# systemRecord Configuration File
+# This file defines what paths to scan, what to include/exclude, and archiving rules
+
+# Logging configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+# Path configuration
+paths:
+  # Paths to scan for system fingerprinting
+  scan:
+    - "/etc"
+    - "/usr/local"
+    - "/opt"
+    - "/var/log"
+    - "/home"
+
+  # Paths to exclude from scanning
+  exclude:
+    - "/proc"
+    - "/sys"
+    - "/dev"
+    - "/run"
+    - "/tmp"
+    - "/var/tmp"
+    - "/var/cache"
+    - "/var/lib/docker"
+    - "/var/lib/kubelet"
+  
+  # Include patterns (glob patterns)
+  # If specified, only paths matching these patterns will be included
+  include:
+    - "*.conf"
+    - "*.config"
+    - "*.cfg"
+    - "*.ini"
+    - "*.json"
+    - "*.yaml"
+    - "*.yml"
+    - "*.xml"
+    - "*.properties"
+    - "*.log"
+    - "*.txt"
+    - "*.sh"
+    - "*.py"
+    - "*.js"
+    - "*.html"
+    - "*.css"
+  
+  # Exclude patterns (glob patterns)
+  # Paths matching these patterns will be excluded
+  exclude:
+    - "*/tmp/*"
+    - "*/temp/*"
+    - "*/.git/*"
+    - "*/.svn/*"
+    - "*/node_modules/*"
+    - "*/__pycache__/*"
+    - "*.pyc"
+    - "*.pyo"
+    - "*.class"
+    - "*.o"
+    - "*.so"
+    - "*.dylib"
+    - "*.dll"
+    - "*/cache/*"
+    - "*/Cache/*"
+    - "*/.cache/*"
+    - "*/logs/*.log.*"  # Exclude rotated log files
+    - "*/core"
+    - "*/core.*"
+
+
+# Performance settings
+performance:
+  # Number of worker threads for file processing
+  worker_threads: 4
+  
+  # Chunk size for file hashing (bytes)
+  hash_chunk_size: 65536  # 64KB
+  
+  # Maximum files to process (0 = unlimited)
+  max_files: 0
+
+# User interface settings
+ui:
+  # File viewer panel names
+  panel_names:
+    left: "Left File"
+    right: "Right File"
+  
+  # File viewer settings  
+  file_viewer:
+    sync_scrolling: true
+    font_size: 10
+    default_view: "side_by_side"  # side_by_side, unified_diff, hex_view

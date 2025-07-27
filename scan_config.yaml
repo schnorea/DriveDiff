@@ -1,0 +1,36 @@
+logging:
+  level: DEBUG
+paths:
+  scan:
+  - /etc
+  exclude:
+  - /proc
+  - /sys
+  - /dev
+  - /run
+  - /tmp
+  - /var/tmp
+  - /var/cache
+  include:
+  - '*.conf'
+  - '*.config'
+  - '*.cfg'
+  - '*.ini'
+  - '*.json'
+  - '*.yaml'
+  - '*.yml'
+  - '*.xml'
+  - '*.txt'
+  - '*.log'
+  exclude_patterns:
+  - '*/tmp/*'
+  - '*/temp/*'
+  - '*/.git/*'
+  - '*/node_modules/*'
+  - '*/__pycache__/*'
+  - '*.pyc'
+  - '*.pyo'
+performance:
+  worker_threads: 4
+  hash_chunk_size: 65536
+  max_files: 0

@@ -1,0 +1,6 @@
+difflib
+send2trash
+chardet
+Pillow>=8.0.0
+pytest>=6.0.0
+PyYAML>=5.0.0

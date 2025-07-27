@@ -6,12 +6,14 @@ A powerful GUI-based application for comparing contents between two directories 
 
 ### Core Comparison
 - **Directory Comparison**: Compare any two directories or mounted SD cards
+- **Structure Comparison**: Fast lightweight comparison of directory structure only (directories, not individual files)
 - **SHA256 Hash Verification**: Content-based comparison using cryptographic hashes
 - **Binary File Detection**: Automatically excludes binary files from text comparison
 - **Smart File Analysis**: Detects identical, modified, added, and removed files
 
 ### User Interface
 - **Intuitive GUI**: Clean tkinter-based interface with professional styling
+- **Dual Comparison Modes**: Full content comparison or fast structure-only comparison
 - **Side-by-Side File Viewer**: Compare file contents with synchronized scrolling
 - **Diff Highlighting**: Color-coded differences in text files
 - **Custom Panel Names**: Personalize left/right panel labels (e.g., "Production SD", "Backup SD")
@@ -82,10 +84,18 @@ run.bat
 ```
 
 ### Basic Workflow
+
+#### Quick Structure Check
+1. **Select Directories**: Choose left and right directories to compare
+2. **Set Panel Names** (Optional): Customize labels like "Production SD" and "Backup SD"
+3. **Structure Comparison**: Click "Compare Structure" for fast directory tree comparison
+4. **Review Structure**: See added/removed directories and folder structure differences
+
+#### Full Content Comparison
 1. **Select Directories**: Choose left and right directories to compare
 2. **Set Panel Names** (Optional): Customize labels like "Production SD" and "Backup SD"
 3. **Configure Scan** (Optional): Use "File → Scan Configuration" to set selective paths
-4. **Start Comparison**: Click "Compare Directories"
+4. **Start Comparison**: Click "Compare Directories" for full content analysis
 5. **Review Results**: Navigate through identical, modified, added, and removed files
 6. **View File Details**: Double-click files to see side-by-side content comparison
 7. **Export Reports**: Use "File → Export Report" to save results

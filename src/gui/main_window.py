@@ -9,7 +9,7 @@ import os
 import threading
 from typing import Optional
 
-from ..core.directory_scanner import DirectoryScanner, DirectoryComparison
+from ..core.directory_scanner import DirectoryScanner, DirectoryComparison, StructureComparison
 from ..core.report_generator import ReportGenerator
 from ..utils.yaml_config import YamlConfigManager
 from .comparison_tree import ComparisonTreeView
@@ -37,7 +37,9 @@ class MainWindow:
         self.left_path = tk.StringVar()
         self.right_path = tk.StringVar()
         self.current_comparison: Optional[DirectoryComparison] = None
+        self.current_structure_comparison: Optional[StructureComparison] = None
         self.comparison_thread: Optional[threading.Thread] = None
+        self.structure_thread: Optional[threading.Thread] = None
         
         self._setup_window()
         self._create_menu()
@@ -129,7 +131,11 @@ class MainWindow:
         
         # Compare button
         self.compare_button = ttk.Button(control_frame, text="Compare Directories", command=self._start_comparison)
-        self.compare_button.pack(side="left", padx=(0, 10))
+        self.compare_button.pack(side="left", padx=(0, 5))
+        
+        # Compare Structure button
+        self.structure_button = ttk.Button(control_frame, text="Compare Structure", command=self._start_structure_comparison)
+        self.structure_button.pack(side="left", padx=(0, 10))
         
         # Cancel button
         self.cancel_button = ttk.Button(control_frame, text="Cancel", command=self._cancel_comparison, state="disabled")
@@ -239,6 +245,9 @@ class MainWindow:
         if self.comparison_thread and self.comparison_thread.is_alive():
             self.directory_scanner.cancel_comparison()
             self.status_var.set("Cancelling comparison...")
+        elif self.structure_thread and self.structure_thread.is_alive():
+            self.directory_scanner.cancel_comparison()
+            self.status_var.set("Cancelling structure comparison...")
     
     def _on_progress_update(self, current: int, total: int, current_file: str):
         """Handle progress updates from comparison"""
@@ -277,6 +286,184 @@ class MainWindow:
         
         # Schedule UI update in main thread
         self.root.after(0, update_ui)
+    
+    def _start_structure_comparison(self):
+        """Start directory structure comparison"""
+        left_path = self.left_path.get().strip()
+        right_path = self.right_path.get().strip()
+        
+        # Validate paths (same validation as full comparison)
+        if not left_path or not right_path:
+            messagebox.showerror("Error", "Please select both directories to compare.")
+            return
+        
+        if not os.path.exists(left_path) or not os.path.isdir(left_path):
+            messagebox.showerror("Error", f"Left directory does not exist or is not accessible: {left_path}")
+            return
+        
+        if not os.path.exists(right_path) or not os.path.isdir(right_path):
+            messagebox.showerror("Error", f"Right directory does not exist or is not accessible: {right_path}")
+            return
+        
+        if left_path == right_path:
+            messagebox.showerror("Error", "Please select different directories to compare.")
+            return
+        
+        # Load scan configuration and apply it
+        try:
+            scan_config = self.yaml_config_manager.get_scan_configuration()
+            
+            # Update directory scanner with current configuration
+            self.directory_scanner = DirectoryScanner.from_config(self.yaml_config_manager)
+            
+        except Exception as e:
+            messagebox.showwarning("Configuration Warning", 
+                                 f"Failed to load scan configuration: {str(e)}\n"
+                                 "Using default settings.")
+        
+        # Clear previous results
+        self._clear_results()
+        
+        # Update UI for structure comparison
+        self.compare_button.config(state="disabled")
+        self.structure_button.config(state="disabled")
+        self.cancel_button.config(state="normal")
+        self.progress_bar.config(value=0)
+        self.progress_var.set("Starting structure comparison...")
+        self.status_var.set("Comparing directory structures...")
+        
+        # Start structure comparison in a separate thread
+        self.structure_thread = self.directory_scanner.compare_structure_async(
+            left_path, right_path,
+            progress_callback=self._on_structure_progress_update,
+            completion_callback=self._on_structure_comparison_complete
+        )
+    
+    def _on_structure_progress_update(self, current: int, total: int, current_path: str):
+        """Handle progress updates from structure comparison"""
+        def update_ui():
+            if total > 0:
+                progress = (current / total) * 100
+                self.progress_bar.config(value=progress)
+                self.progress_var.set(f"Scanning {current}/{total}: {os.path.basename(current_path)}")
+        
+        # Schedule UI update in main thread
+        self.root.after(0, update_ui)
+    
+    def _on_structure_comparison_complete(self, structure_comparison: Optional[StructureComparison]):
+        """Handle completion of structure comparison"""
+        def update_ui():
+            self.compare_button.config(state="normal")
+            self.structure_button.config(state="normal")
+            self.cancel_button.config(state="disabled")
+            self.progress_bar.config(value=0)
+            
+            if structure_comparison:
+                self.current_structure_comparison = structure_comparison
+                self._display_structure_comparison(structure_comparison)
+                
+                # Update status
+                summary = f"Structure comparison complete: {len(structure_comparison.common_files)} common files, " \
+                         f"{len(structure_comparison.common_directories)} common dirs, " \
+                         f"{len(structure_comparison.added_paths)} added, " \
+                         f"{len(structure_comparison.removed_paths)} removed"
+                
+                self.progress_var.set("Structure comparison complete")
+                self.status_var.set(summary)
+            else:
+                self.progress_var.set("Structure comparison failed or cancelled")
+                self.status_var.set("Ready")
+                messagebox.showerror("Error", "Structure comparison failed or was cancelled.")
+        
+        # Schedule UI update in main thread
+        self.root.after(0, update_ui)
+    
+    def _display_structure_comparison(self, structure_comparison: StructureComparison):
+        """Display structure comparison results in the tree view"""
+        # For now, we'll create a simplified DirectoryComparison object to display in the existing tree
+        # In the future, we might want to create a specialized structure tree view
+        
+        from datetime import datetime
+        from ..core.file_comparator import FileDifference, FileInfo
+        
+        # Create dummy file differences for the tree view
+        file_differences = {}
+        dummy_time = datetime.now()
+        
+        # Add added directories
+        for directory_path in structure_comparison.added_directories:
+            file_diff = FileDifference(
+                file_path=directory_path,
+                left_info=None,
+                right_info=FileInfo(
+                    path=directory_path,
+                    size=0,  # We don't analyze sizes in structure comparison
+                    modified_time=dummy_time,
+                    permissions="",
+                    exists=True,
+                    hash_sha256=""
+                ),
+                status="added"
+            )
+            file_differences[directory_path] = file_diff
+        
+        # Add removed directories
+        for directory_path in structure_comparison.removed_directories:
+            file_diff = FileDifference(
+                file_path=directory_path,
+                left_info=FileInfo(
+                    path=directory_path,
+                    size=0,
+                    modified_time=dummy_time,
+                    permissions="",
+                    exists=True,
+                    hash_sha256=""
+                ),
+                right_info=None,
+                status="removed"
+            )
+            file_differences[directory_path] = file_diff
+        
+        # Add common directories as identical (no content analysis done)
+        for directory_path in structure_comparison.common_directories:
+            file_diff = FileDifference(
+                file_path=directory_path,
+                left_info=FileInfo(
+                    path=directory_path,
+                    size=0,
+                    modified_time=dummy_time,
+                    permissions="",
+                    exists=True,
+                    hash_sha256=""
+                ),
+                right_info=FileInfo(
+                    path=directory_path,
+                    size=0,
+                    modified_time=dummy_time,
+                    permissions="",
+                    exists=True,
+                    hash_sha256=""
+                ),
+                status="identical"
+            )
+            file_differences[directory_path] = file_diff
+        
+        # Create a DirectoryComparison-like object for display (treating directories as files for tree display)
+        display_comparison = DirectoryComparison(
+            added_files=structure_comparison.added_directories,
+            removed_files=structure_comparison.removed_directories,
+            modified_files=[],  # No content analysis, so no modified files
+            identical_files=structure_comparison.common_directories,
+            file_differences=file_differences,
+            total_files=structure_comparison.total_directories,
+            processed_files=structure_comparison.processed_directories
+        )
+        
+        # Display in the tree view
+        self.comparison_tree.display_comparison(display_comparison)
+        
+        # Store both comparisons
+        self.current_comparison = display_comparison
     
     def _on_file_selected(self, file_path: str, file_diff):
         """Handle file selection in the comparison tree"""

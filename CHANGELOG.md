@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2025-07-27
+
+### Changed
+- **Directory Structure Comparison**: Improved to focus only on directory structure, not individual files
+  - Now scans only directories for true structural comparison
+  - Faster and more focused on actual directory tree differences
+  - Removes file-level noise for cleaner structural analysis
+
+## [1.1.0] - 2025-07-27
+
+### Added
+- **Directory Structure Comparison**: New "Compare Structure" button for fast directory tree analysis
+  - Lightweight comparison focusing only on directory structure and existence
+  - No file content hashing or analysis for maximum speed
+  - Perfect for quickly identifying structural changes between directories
+  - Separate progress tracking and completion callbacks
+  - Results displayed in existing tree view with clear status indicators
+
+### Technical Details
+- New `StructureComparison` dataclass for structure-only results
+- `compare_structure()` and `compare_structure_async()` methods in DirectoryScanner
+- Enhanced UI with dual comparison modes (Structure + Full Content)
+- Shared cancellation mechanism for both comparison types
+- Backward compatible with existing comparison functionality
+
 ## [1.0.0] - 2025-07-27
 
 ### Added

@@ -1,4 +1,3 @@
-difflib
 send2trash
 chardet
 Pillow>=8.0.0

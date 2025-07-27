@@ -22,6 +22,15 @@ class DirectoryComparison:
     total_files: int
     processed_files: int
 
+@dataclass
+class StructureComparison:
+    """Results of a directory structure comparison (directories only, no files or content analysis)"""
+    added_directories: List[str]  # Directories present in right, missing in left
+    removed_directories: List[str]  # Directories present in left, missing in right
+    common_directories: List[str]  # Directories present in both
+    total_directories: int
+    processed_directories: int
+
 class DirectoryScanner:
     """Handles directory scanning and comparison operations"""
     
@@ -264,6 +273,151 @@ class DirectoryScanner:
         """Cancel the current comparison operation"""
         self._cancel_requested = True
     
+    def compare_structure(self, left_path: str, right_path: str, 
+                         progress_callback: Optional[Callable[[int, int, str], None]] = None) -> StructureComparison:
+        """
+        Compare directory structures without analyzing file contents
+        
+        This is a lightweight comparison that only looks at directory structure,
+        file/directory existence, and basic file information (size, modification time).
+        No file content hashing is performed.
+        
+        Args:
+            left_path: Path to the left directory
+            right_path: Path to the right directory
+            progress_callback: Optional callback for progress updates (current, total, current_path)
+            
+        Returns:
+            StructureComparison object containing the structure differences
+        """
+        # Reset cancel flag
+        self._cancel_requested = False
+        
+        # Scan both directories for structure only
+        left_structure = self._scan_directory_structure(left_path)
+        right_structure = self._scan_directory_structure(right_path)
+        
+        # Calculate differences
+        all_directories = left_structure.union(right_structure)
+        added_directories = []
+        removed_directories = []
+        common_directories = []
+        
+        processed = 0
+        total = len(all_directories)
+        
+        for directory_path in sorted(all_directories):
+            if self._cancel_requested:
+                break
+                
+            if progress_callback:
+                progress_callback(processed, total, directory_path)
+            
+            in_left = directory_path in left_structure
+            in_right = directory_path in right_structure
+            
+            if in_left and in_right:
+                # Directory present in both
+                common_directories.append(directory_path)
+            elif in_right and not in_left:
+                # Directory added in right
+                added_directories.append(directory_path)
+            elif in_left and not in_right:
+                # Directory removed from right
+                removed_directories.append(directory_path)
+            
+            processed += 1
+        
+        return StructureComparison(
+            added_directories=added_directories,
+            removed_directories=removed_directories,
+            common_directories=common_directories,
+            total_directories=total,
+            processed_directories=processed
+        )
+    
+    def _scan_directory_structure(self, directory_path: str) -> Set[str]:
+        """
+        Scan directory structure and return set of all relative directory paths only
+        
+        Args:
+            directory_path: Path to the directory to scan
+            
+        Returns:
+            Set of relative directory paths (no files, directories only)
+        """
+        if not os.path.exists(directory_path) or not os.path.isdir(directory_path):
+            return set()
+        
+        path_set = set()
+        
+        try:
+            # For structure comparison, always scan entire directory but respect exclude patterns
+            self._scan_structure_path(directory_path, directory_path, path_set)
+                
+        except Exception as e:
+            print(f"Error scanning directory structure {directory_path}: {e}")
+        
+        return path_set
+    
+    def _scan_structure_path(self, scan_root: str, base_directory: str, path_set: Set[str]):
+        """
+        Recursively scan a path and add all directories to the set (no files)
+        
+        Args:
+            scan_root: The directory to scan from
+            base_directory: The base directory for calculating relative paths
+            path_set: Set to add relative directory paths to
+        """
+        try:
+            for root, dirs, files in os.walk(scan_root):
+                if self._cancel_requested:
+                    break
+                
+                # Filter out ignored directories
+                dirs[:] = [d for d in dirs if not self._should_ignore_directory(d)]
+                
+                # Add current directory to set (if not the root)
+                if root != base_directory:
+                    rel_dir = os.path.relpath(root, base_directory)
+                    if rel_dir != "." and not self._should_ignore_file(rel_dir):
+                        path_set.add(rel_dir)
+                
+                # For structure comparison, we only care about directories, not individual files
+                # This gives us a lightweight view of the directory tree structure
+                        
+        except Exception as e:
+            print(f"Error scanning structure path {scan_root}: {e}")
+    
+    def compare_structure_async(self, left_path: str, right_path: str,
+                               progress_callback: Optional[Callable[[int, int, str], None]] = None,
+                               completion_callback: Optional[Callable[[StructureComparison], None]] = None) -> threading.Thread:
+        """
+        Compare directory structures asynchronously
+        
+        Args:
+            left_path: Path to the left directory  
+            right_path: Path to the right directory
+            progress_callback: Optional callback for progress updates
+            completion_callback: Optional callback when comparison completes
+            
+        Returns:
+            Thread object for the comparison operation
+        """
+        def run_structure_comparison():
+            try:
+                result = self.compare_structure(left_path, right_path, progress_callback)
+                if completion_callback:
+                    completion_callback(result)
+            except Exception as e:
+                print(f"Error during structure comparison: {e}")
+                if completion_callback:
+                    completion_callback(None)
+        
+        thread = threading.Thread(target=run_structure_comparison, daemon=True)
+        thread.start()
+        return thread
+    
     def get_directory_summary(self, directory_path: str) -> Dict[str, int]:
         """
         Get summary statistics for a directory
@@ -406,3 +560,23 @@ class DirectoryScanner:
             return False
                 
         return True
+    
+    def _should_ignore_file(self, file_path: str) -> bool:
+        """
+        Check if a file should be ignored based on ignore patterns only
+        (used for structure comparison where we don't want include pattern restrictions)
+        
+        Args:
+            file_path: Relative file path to check
+            
+        Returns:
+            True if file should be ignored
+        """
+        file_name = os.path.basename(file_path)
+        
+        # Check ignore patterns
+        for pattern in self.ignore_patterns:
+            if fnmatch.fnmatch(file_name, pattern) or fnmatch.fnmatch(file_path, pattern):
+                return True
+        
+        return False

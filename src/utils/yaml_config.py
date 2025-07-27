@@ -21,6 +21,14 @@ class ScanConfiguration:
     hash_chunk_size: int
     max_files: int
 
+@dataclass
+class ComparisonConfiguration:
+    """Configuration for specific comparison type"""
+    scan_paths: List[str]
+    exclude_paths: List[str]
+    include_patterns: List[str]
+    exclude_patterns: List[str]
+
 class YamlConfigManager:
     """Manages YAML configuration files"""
     
@@ -34,49 +42,70 @@ class YamlConfigManager:
         self.config_file_path = config_file_path or "scan_config.yaml"
         self.default_config_path = "default.yaml"
         
-        # Default configuration
+        # Default configuration with separate directory and structure settings
         self.default_config = {
             'logging': {
                 'level': 'INFO'
             },
-            'paths': {
-                'scan': [
-                    '/etc',
-                    '/usr/local',
-                    '/opt',
-                    '/var/log',
-                    '/home'
-                ],
-                'exclude': [
-                    '/proc',
-                    '/sys',
-                    '/dev',
-                    '/run',
-                    '/tmp',
-                    '/var/tmp',
-                    '/var/cache'
-                ],
-                'include': [
-                    '*.conf',
-                    '*.config',
-                    '*.cfg',
-                    '*.ini',
-                    '*.json',
-                    '*.yaml',
-                    '*.yml',
-                    '*.xml',
-                    '*.txt',
-                    '*.log'
-                ],
-                'exclude_patterns': [
-                    '*/tmp/*',
-                    '*/temp/*',
-                    '*/.git/*',
-                    '*/node_modules/*',
-                    '*/__pycache__/*',
-                    '*.pyc',
-                    '*.pyo'
-                ]
+            'directory_comparison': {
+                'paths': {
+                    'scan': [],
+                    'exclude': [
+                        '/proc',
+                        '/sys',
+                        '/dev',
+                        '/run',
+                        '/tmp',
+                        '/var/tmp',
+                        '/var/cache'
+                    ],
+                    'include': [
+                        '*.conf',
+                        '*.config',
+                        '*.cfg',
+                        '*.ini',
+                        '*.json',
+                        '*.yaml',
+                        '*.yml',
+                        '*.xml',
+                        '*.txt',
+                        '*.log'
+                    ],
+                    'exclude_patterns': [
+                        '*/tmp/*',
+                        '*/temp/*',
+                        '*/.git/*',
+                        '*/node_modules/*',
+                        '*/__pycache__/*',
+                        '*.pyc',
+                        '*.pyo'
+                    ]
+                }
+            },
+            'structure_comparison': {
+                'paths': {
+                    'scan': [],
+                    'exclude': [
+                        '/proc',
+                        '/sys',
+                        '/dev',
+                        '/run',
+                        '/tmp',
+                        '/var/tmp',
+                        '/var/cache',
+                        '/var/log',
+                        '/var/spool'
+                    ],
+                    'exclude_patterns': [
+                        '*/tmp/*',
+                        '*/temp/*',
+                        '*/.git/*',
+                        '*/node_modules/*',
+                        '*/__pycache__/*',
+                        '*/venv/*',
+                        '*/cache/*'
+                    ]
+                }
             },
             'performance': {
                 'worker_threads': 4,
@@ -102,6 +131,8 @@ class YamlConfigManager:
                 with open(config_path, 'r', encoding='utf-8') as f:
                     config = yaml.safe_load(f)
                     if config:
+                        # Migrate legacy configuration if needed
+                        config = self._migrate_legacy_config(config)
                         return self._merge_with_defaults(config)
             
             # If file doesn't exist or is empty, try default.yaml
@@ -109,6 +140,7 @@ class YamlConfigManager:
                 with open(self.default_config_path, 'r', encoding='utf-8') as f:
                     config = yaml.safe_load(f)
                     if config:
+                        config = self._migrate_legacy_config(config)
                         return self._merge_with_defaults(config)
             
             # Return default configuration
@@ -117,6 +149,56 @@ class YamlConfigManager:
         except Exception as e:
             print(f"Error loading configuration: {e}")
             return self.default_config.copy()
+    
+    def _migrate_legacy_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Migrate legacy configuration format to new dual structure
+        
+        Args:
+            config: Configuration dictionary that may contain legacy format
+            
+        Returns:
+            Migrated configuration dictionary
+        """
+        # If we have the old 'paths' format but not the new structure, migrate it
+        if 'paths' in config and ('directory_comparison' not in config or 'structure_comparison' not in config):
+            legacy_paths = config.get('paths', {})
+            
+            # Don't migrate if paths is empty (modern config)
+            if any(legacy_paths.get(key) for key in ['scan', 'exclude', 'include', 'exclude_patterns']):
+                print("Migrating legacy configuration to new format...")
+                
+                # Create directory_comparison from legacy paths
+                if 'directory_comparison' not in config:
+                    config['directory_comparison'] = {
+                        'paths': {
+                            'scan': legacy_paths.get('scan', []),
+                            'exclude': legacy_paths.get('exclude', []),
+                            'include': legacy_paths.get('include', []),
+                            'exclude_patterns': legacy_paths.get('exclude_patterns', [])
+                        }
+                    }
+                
+                # Create structure_comparison with modified settings
+                if 'structure_comparison' not in config:
+                    # For structure comparison, exclude include patterns and add more aggressive exclusions
+                    config['structure_comparison'] = {
+                        'paths': {
+                            'scan': legacy_paths.get('scan', []),
+                            'exclude': legacy_paths.get('exclude', []) + ['/var/log', '/var/spool'],
+                            'exclude_patterns': legacy_paths.get('exclude_patterns', [])
+                        }
+                    }
+                
+                # Clear legacy paths to avoid confusion
+                config['paths'] = {
+                    'scan': [],
+                    'exclude': [],
+                    'include': [],
+                    'exclude_patterns': []
+                }
+        
+        return config
     
     def save_config(self, config: Dict[str, Any], file_path: str = None) -> bool:
         """
@@ -163,7 +245,7 @@ class YamlConfigManager:
     
     def get_scan_configuration(self, config: Dict[str, Any] = None) -> ScanConfiguration:
         """
-        Get scan configuration object
+        Get scan configuration object (legacy support - uses directory_comparison)
         
         Args:
             config: Optional config dict, loads from file if None
@@ -174,20 +256,123 @@ class YamlConfigManager:
         if config is None:
             config = self.load_config()
         
-        paths = config.get('paths', {})
+        # Use directory_comparison as default for legacy support
+        dir_config = self.get_directory_comparison_config(config)
         performance = config.get('performance', {})
         logging = config.get('logging', {})
         
         return ScanConfiguration(
-            scan_paths=paths.get('scan', []),
-            exclude_paths=paths.get('exclude', []),
-            include_patterns=paths.get('include', []),
-            exclude_patterns=paths.get('exclude_patterns', []),
+            scan_paths=dir_config.scan_paths,
+            exclude_paths=dir_config.exclude_paths,
+            include_patterns=dir_config.include_patterns,
+            exclude_patterns=dir_config.exclude_patterns,
             logging_level=logging.get('level', 'INFO'),
             worker_threads=performance.get('worker_threads', 4),
             hash_chunk_size=performance.get('hash_chunk_size', 65536),
             max_files=performance.get('max_files', 0)
         )
+    
+    def get_directory_comparison_config(self, config: Dict[str, Any] = None) -> ComparisonConfiguration:
+        """
+        Get directory comparison configuration
+        
+        Args:
+            config: Optional config dict, loads from file if None
+            
+        Returns:
+            ComparisonConfiguration object for directory comparison
+        """
+        if config is None:
+            config = self.load_config()
+        
+        dir_comparison = config.get('directory_comparison', {})
+        paths = dir_comparison.get('paths', {})
+        
+        return ComparisonConfiguration(
+            scan_paths=paths.get('scan', []),
+            exclude_paths=paths.get('exclude', []),
+            include_patterns=paths.get('include', []),
+            exclude_patterns=paths.get('exclude_patterns', [])
+        )
+    
+    def get_structure_comparison_config(self, config: Dict[str, Any] = None) -> ComparisonConfiguration:
+        """
+        Get structure comparison configuration
+        
+        Args:
+            config: Optional config dict, loads from file if None
+            
+        Returns:
+            ComparisonConfiguration object for structure comparison
+        """
+        if config is None:
+            config = self.load_config()
+        
+        struct_comparison = config.get('structure_comparison', {})
+        paths = struct_comparison.get('paths', {})
+        
+        return ComparisonConfiguration(
+            scan_paths=paths.get('scan', []),
+            exclude_paths=paths.get('exclude', []),
+            include_patterns=paths.get('include', []),  # May be empty for structure comparison
+            exclude_patterns=paths.get('exclude_patterns', [])
+        )
+    
+    def save_directory_comparison_config(self, comparison_config: ComparisonConfiguration, 
+                                       config: Dict[str, Any] = None) -> bool:
+        """
+        Save directory comparison configuration
+        
+        Args:
+            comparison_config: Configuration to save
+            config: Optional existing config dict, loads from file if None
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if config is None:
+            config = self.load_config()
+        
+        if 'directory_comparison' not in config:
+            config['directory_comparison'] = {}
+        if 'paths' not in config['directory_comparison']:
+            config['directory_comparison']['paths'] = {}
+        
+        paths = config['directory_comparison']['paths']
+        paths['scan'] = comparison_config.scan_paths
+        paths['exclude'] = comparison_config.exclude_paths
+        paths['include'] = comparison_config.include_patterns
+        paths['exclude_patterns'] = comparison_config.exclude_patterns
+        
+        return self.save_config(config)
+    
+    def save_structure_comparison_config(self, comparison_config: ComparisonConfiguration, 
+                                       config: Dict[str, Any] = None) -> bool:
+        """
+        Save structure comparison configuration
+        
+        Args:
+            comparison_config: Configuration to save
+            config: Optional existing config dict, loads from file if None
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if config is None:
+            config = self.load_config()
+        
+        if 'structure_comparison' not in config:
+            config['structure_comparison'] = {}
+        if 'paths' not in config['structure_comparison']:
+            config['structure_comparison']['paths'] = {}
+        
+        paths = config['structure_comparison']['paths']
+        paths['scan'] = comparison_config.scan_paths
+        paths['exclude'] = comparison_config.exclude_paths
+        paths['include'] = comparison_config.include_patterns
+        paths['exclude_patterns'] = comparison_config.exclude_patterns
+        
+        return self.save_config(config)
     
     def validate_config(self, config: Dict[str, Any]) -> List[str]:
         """

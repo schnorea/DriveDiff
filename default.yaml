@@ -49,26 +49,55 @@ paths:
   
   # Exclude patterns (glob patterns)
   # Paths matching these patterns will be excluded
-  exclude:
-    - "*/tmp/*"
-    - "*/temp/*"
-    - "*/.git/*"
-    - "*/.svn/*"
-    - "*/node_modules/*"
-    - "*/__pycache__/*"
-    - "*.pyc"
-    - "*.pyo"
-    - "*.class"
-    - "*.o"
-    - "*.so"
-    - "*.dylib"
-    - "*.dll"
-    - "*/cache/*"
-    - "*/Cache/*"
-    - "*/.cache/*"
-    - "*/logs/*.log.*"  # Exclude rotated log files
-    - "*/core"
-    - "*/core.*"
+  exclude_patterns:
+    - "*/tmp/*"       # Files inside tmp directories (anywhere in path)
+    - "tmp"           # Top-level tmp directory
+    - "tmp/*"         # Files directly under tmp
+    - "*/temp/*"      # Files inside temp directories
+    - "temp"          # Top-level temp directory  
+    - "temp/*"        # Files directly under temp
+    - "*/.git/*"      # Git files (anywhere in path)
+    - ".git"          # Top-level .git directory
+    - ".git/*"        # Files directly under .git
+    - "*/.svn/*"      # SVN files (anywhere in path)
+    - ".svn"          # Top-level .svn directory
+    - ".svn/*"        # Files directly under .svn
+    - "*/node_modules/*"  # Node.js dependencies (anywhere in path)
+    - "node_modules"      # Top-level node_modules
+    - "node_modules/*"    # Files directly under node_modules
+    - "*/__pycache__/*"   # Python cache (anywhere in path)
+    - "__pycache__"       # Top-level __pycache__
+    - "__pycache__/*"     # Files directly under __pycache__
+    - "*.pyc"         # Python compiled files
+    - "*.pyo"         # Python optimized files
+    - "*.class"       # Java compiled files
+    - "*.o"           # Object files
+    - "*.so"          # Shared libraries
+    - "*.dylib"       # macOS dynamic libraries
+    - "*.dll"         # Windows dynamic libraries
+    - "*/cache/*"     # Cache directories (anywhere in path)
+    - "cache"         # Top-level cache directory
+    - "cache/*"       # Files directly under cache
+    - "*/Cache/*"     # Cache directories with capital C
+    - "Cache"         # Top-level Cache directory
+    - "Cache/*"       # Files directly under Cache
+    - "*/.cache/*"    # Hidden cache directories
+    - ".cache"        # Top-level .cache directory
+    - ".cache/*"      # Files directly under .cache
+    - "*/venv/*"      # Python virtual environments
+    - "venv"          # Top-level venv directory
+    - "venv/*"        # Files directly under venv
+    - "*/env/*"       # Environment directories
+    - "env"           # Top-level env directory
+    - "env/*"         # Files directly under env
+    - "*/logs/*.log.*"    # Rotated log files
+    - "*/core"        # Core dump files
+    - "*/core.*"      # Core dump files with extensions
+    - "*~"            # Backup files
+    - "*.swp"         # Vim swap files
+    - "*.tmp"         # Temporary files
+    - ".DS_Store"     # macOS metadata files
+    - "Thumbs.db"     # Windows thumbnail cache
 
 
 # Performance settings

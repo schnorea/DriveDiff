@@ -1,188 +1,122 @@
-# SD Card Comparison Tool - Project Overview
+# DriveDiff - Project Overview
 
-## 🎯 Project Summary
+## Current Version: 1.3.0
 
-The SD Card Comparison Tool is a comprehensive GUI-based Python application designed to compare contents between two SD card mount points or any directories. It provides detailed file and directory comparison capabilities with an intuitive user interface.
+### Project Description
+DriveDiff is an advanced directory comparison tool with dual comparison modes, intelligent mounted volume support, and a comprehensive configuration system. The application provides both deep file content analysis and fast directory structure comparison with an intuitive GUI interface.
 
-## ✨ Key Features
+## Key Features
 
-### Core Functionality
-- **Directory Comparison**: Compare two directories with detailed file-by-file analysis
-- **Selective Path Scanning**: Configure specific subdirectories to scan within selected directories via YAML configuration
-- **File Content Viewing**: Side-by-side file content comparison with diff highlighting
-- **Multiple View Modes**: Side-by-side, unified diff, and hex view options
-- **Progress Tracking**: Real-time progress indication for large directory comparisons
-- **File Filtering**: Customizable ignore patterns for files and directories
+### Dual Comparison System
+- **Directory Comparison**: SHA256-based file content comparison with detailed analysis
+- **Structure Comparison**: Fast directory tree analysis focusing on structure only
+- **Independent Configuration**: Separate settings and optimization for each comparison type
 
-### Comparison Capabilities
-- **File Status Detection**: Identifies added, removed, modified, and identical files
-- **Metadata Comparison**: Compares file sizes, modification times, and permissions
-- **Binary/Text Detection**: Automatic detection of file types with appropriate handling
-- **Syntax Highlighting**: Basic syntax highlighting for code files
+### Advanced Path Intelligence
+- **Mounted Volume Support**: Intelligent handling of `/Volumes/rootfs/usr/share` → `/usr/share` path matching
+- **Smart Exclusion Patterns**: Context-aware pattern matching for complex directory structures
+- **Cross-Platform Compatibility**: Works across macOS, Windows, and Linux mounted filesystems
 
-### Export and Reporting
-- **Multiple Export Formats**: HTML, CSV, JSON, and plain text reports
-- **Detailed Reports**: Comprehensive comparison results with file metadata
-- **Save/Load Results**: Save comparison results for later review
+### Configuration Management
+- **YAML-Based Configuration**: Clean, readable dual configuration structure
+- **GUI Configuration Dialog**: User-friendly interface with validation and real-time preview
+- **Import/Export**: Save and load configuration presets
+- **Performance Tuning**: Configurable threading, memory usage, and processing limits
 
-### User Experience
-- **Intuitive GUI**: Clean, professional interface built with tkinter
-- **Customizable Settings**: Extensive configuration options through settings dialog
-- **Recent Paths**: Remember frequently used directory paths
-- **Keyboard Shortcuts**: Standard keyboard shortcuts for common operations
+## Architecture
 
-## 🏗️ Architecture
+### Core Components
 
-### Project Structure
-```
-DriveDiff/
-├── main.py                      # Application entry point
-├── requirements.txt             # Python dependencies
-├── config.py                   # Default configuration
-├── run.sh / run.bat            # Cross-platform launch scripts
-├── README.md                   # Project documentation
-├── requirements.md             # Original requirements document
-├── src/
-│   ├── __init__.py
-│   ├── core/                   # Core business logic
-│   │   ├── file_comparator.py     # File comparison algorithms
-│   │   ├── directory_scanner.py   # Directory traversal and comparison
-│   │   └── report_generator.py    # Report generation in multiple formats
-│   ├── gui/                    # User interface components
-│   │   ├── main_window.py          # Main application window
-│   │   ├── comparison_tree.py      # Tree view for comparison results
-│   │   ├── file_viewer.py          # File content viewer with diff
-│   │   ├── config_dialog.py        # YAML configuration dialog
-│   │   └── dialogs.py              # Settings and other dialogs
-│   └── utils/                  # Utility modules
-│       ├── file_utils.py           # File system utilities
-│       ├── config.py               # Configuration management
-│       └── yaml_config.py          # YAML configuration manager
-└── tests/                      # Unit tests
-    ├── test_file_comparator.py
-    ├── test_directory_scanner.py
-    └── test_file_utils.py
-```
+#### `/src/core/`
+- **`directory_scanner.py`**: Enhanced scanner with dual comparison modes and intelligent path matching
+- **`file_comparator.py`**: SHA256-based file content comparison engine
+- **`report_generator.py`**: Multi-format report generation (HTML, CSV, JSON, Text)
 
-### Key Components
+#### `/src/gui/`
+- **`main_window.py`**: Primary application interface with tabbed comparison views
+- **`config_dialog.py`**: Comprehensive configuration interface with dual configuration support
+- **`comparison_tree.py`**: Color-coded tree view for navigation and result display
+- **`file_viewer.py`**: Side-by-side file content comparison with diff highlighting
 
-#### Core Module (`src/core/`)
-- **FileComparator**: Handles individual file comparisons, hash calculations, and diff generation
-- **DirectoryScanner**: Manages directory traversal, comparison orchestration, and progress tracking
-- **ReportGenerator**: Creates reports in various formats (HTML, CSV, JSON, text)
+#### `/src/utils/`
+- **`yaml_config.py`**: Dual configuration management with validation and import/export
+- **`config.py`**: Application-wide configuration constants and settings
+- **`file_utils.py`**: File system utilities and path handling
 
-#### GUI Module (`src/gui/`)
-- **MainWindow**: Central application coordinator with menu bar and main layout
-- **ComparisonTreeView**: Displays comparison results in a hierarchical tree view
-- **FileViewer**: Side-by-side file content viewer with diff highlighting
-- **Dialogs**: Settings configuration and about dialogs
+### Configuration Structure
+```yaml
+logging:
+  level: INFO
 
-#### Utils Module (`src/utils/`)
-- **FileUtils**: File system operations, validation, and utility functions
-- **Config**: Configuration management with user settings persistence
-- **YamlConfigManager**: YAML configuration management with validation and selective path scanning
+directory_comparison:    # Full file content comparison
+  paths:
+    scan: []            # Specific directories (empty = all)
+    exclude: []         # Directories to skip
+    include: []         # File patterns to include
+    exclude_patterns: [] # File/directory patterns to exclude
 
-## 🚀 Getting Started
+structure_comparison:    # Directory structure only
+  paths:
+    scan: []            # Specific directories (empty = all)  
+    exclude: []         # Directories to skip
+    exclude_patterns: [] # Directory patterns to exclude
 
-### Prerequisites
-- Python 3.7 or higher
-- tkinter (usually included with Python)
-- Required packages: `chardet`, `Pillow`, `send2trash`
-
-### Installation
-1. Clone or download the project
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-### Running the Application
-- **macOS/Linux**: `./run.sh`
-- **Windows**: `run.bat`
-- **Direct Python**: `python main.py`
-
-### Basic Usage
-1. **Select Directories**: Use the browse buttons to select left and right directories
-2. **Start Comparison**: Click "Compare Directories" to begin analysis
-3. **Review Results**: Browse the comparison tree to see file differences
-4. **View Files**: Select files to see side-by-side content comparison
-5. **Export Results**: Use File menu to export reports in various formats
-
-## 🔧 Configuration
-
-### YAML Configuration System
-Access via Edit → Scan Configuration to configure:
-- **Scan Paths**: Specify which subdirectories to scan within selected directories
-- **Include/Exclude Patterns**: File patterns to include or exclude from comparison  
-- **Performance Settings**: Worker threads, hash chunk size, file limits
-- **Logging**: Set logging levels for debugging
-
-### Settings Dialog
-Access via Edit → Settings to configure:
-- **General**: Window behavior, comparison options, performance settings
-- **Ignore Patterns**: File patterns to exclude from comparison
-- **Appearance**: Font settings, color schemes, display options
-
-### Configuration Storage
-- **macOS**: `~/Library/Application Support/SDCardComparison/`
-- **Linux**: `~/.config/sdcardcomparison/`
-- **Windows**: `%APPDATA%\SDCardComparison\`
-
-## 🧪 Testing
-
-Run the test suite:
-```bash
-python -m pytest tests/ -v
+performance:
+  worker_threads: 4      # Parallel processing
+  hash_chunk_size: 65536 # Memory vs speed optimization
+  max_files: 0          # Processing limit (0 = unlimited)
 ```
 
-Test coverage includes:
-- File comparison algorithms
-- Directory scanning logic
-- Utility functions
-- Error handling scenarios
+## Recent Developments (v1.3.0)
 
-## 📋 Requirements Compliance
+### Major Enhancements
+1. **Dual Configuration System**: Complete separation of Directory vs Structure comparison settings
+2. **Intelligent Mounted Volume Support**: Advanced path matching for mounted filesystems
+3. **Enhanced Configuration Dialog**: Four-tab interface with validation and YAML editing
+4. **Configuration Loading Fix**: Resolved issue with YAML editor not updating from loaded files
 
-The application fulfills all requirements from the original specification:
+### Technical Improvements
+- Removed legacy configuration support for cleaner codebase
+- Organized test structure with proper separation of unit, integration, and GUI tests
+- Enhanced path exclusion logic for complex mounted volume scenarios
+- Improved memory management and configuration handling
 
-✅ **Mount Point Selection**: GUI browse buttons for directory selection  
-✅ **Directory Comparison**: Complete file and directory analysis  
-✅ **File Comparison**: Side-by-side content viewing with diff highlighting  
-✅ **Data Management**: Save/load results, export reports  
-✅ **Performance**: Efficient handling of large directories with progress indication  
-✅ **Usability**: Intuitive interface with clear error handling  
-✅ **File System Support**: Works with various file systems including Paragon extfs  
-✅ **Cross-platform**: Compatible with macOS, Linux, and Windows  
+### Code Quality
+- Comprehensive test coverage for mounted volume scenarios
+- Clean separation of concerns between comparison types
+- Proper error handling and validation throughout
+- Documentation updates reflecting new architecture
 
-## 🔮 Future Enhancements
+## Testing Structure
 
-Potential improvements identified:
-- Advanced search and filtering capabilities
-- Batch file operations (copy, move, delete)
-- Network drive support
-- Plugin architecture for custom comparison rules
-- Enhanced syntax highlighting
-- Integration with version control systems
-- Command-line interface for automation
+### `/tests/`
+- **Unit Tests**: Core functionality testing (scanner, comparator, utils)
+- **`/tests/integration/`**: End-to-end workflow testing
+- **`/tests/gui/`**: User interface and dialog testing
 
-## 🛠️ Development Notes
+### Test Coverage
+- Mounted volume exclusion scenarios
+- Dual configuration system validation
+- Configuration loading and saving
+- Path matching and normalization
+- Performance optimization validation
 
-### Design Decisions
-- **tkinter**: Chosen for cross-platform compatibility and no additional dependencies
-- **Modular Architecture**: Separation of concerns with clear interfaces between components
-- **Threading**: Async operations for UI responsiveness during long operations
-- **Configuration Management**: Persistent settings with sensible defaults
+## Usage Patterns
 
-### Performance Considerations
-- **Lazy Loading**: Files loaded only when needed for viewing
-- **Progress Feedback**: Real-time updates during long operations
-- **Memory Management**: Efficient handling of large files and directories
-- **Cancellation Support**: Ability to cancel long-running operations
+### Typical Workflows
+1. **Quick Structure Check**: Use Structure Comparison for fast directory tree analysis
+2. **Content Verification**: Use Directory Comparison for deep file content validation
+3. **Mounted Volume Analysis**: Automatic handling of complex mounted filesystem paths
+4. **Configuration Management**: Save/load presets for different scanning scenarios
 
-## 📝 License
+### Performance Optimization
+- Structure Comparison: Optimized for speed with minimal exclusions
+- Directory Comparison: Configurable for thoroughness vs performance
+- Smart Threading: Automatic scaling based on system capabilities
+- Memory Management: Configurable chunk sizes for different hardware
 
-This project is released under the MIT License, allowing for both personal and commercial use.
-
----
-
-The SD Card Comparison Tool provides a robust, user-friendly solution for comparing directory contents with professional-grade features and cross-platform compatibility.
+## Future Roadmap
+- Real-time monitoring and incremental comparison
+- Plugin system for custom comparison algorithms
+- Network directory comparison support
+- Advanced reporting with trend analysis

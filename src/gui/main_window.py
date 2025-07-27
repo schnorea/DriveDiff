@@ -13,6 +13,7 @@ from ..core.directory_scanner import DirectoryScanner, DirectoryComparison, Stru
 from ..core.report_generator import ReportGenerator
 from ..utils.yaml_config import YamlConfigManager
 from .comparison_tree import ComparisonTreeView
+from .structure_tree import StructureTreeView
 from .file_viewer import FileViewer
 from .dialogs import SettingsDialog, AboutDialog
 from .config_dialog import ConfigurationDialog
@@ -77,7 +78,7 @@ class MainWindow:
         # Edit menu
         edit_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Edit", menu=edit_menu)
-        edit_menu.add_command(label="Settings...", command=self._show_settings)
+        edit_menu.add_command(label="Application Settings...", command=self._show_settings)
         edit_menu.add_command(label="Scan Configuration...", command=self._show_scan_config)
         edit_menu.add_command(label="Clear Results", command=self._clear_results)
         
@@ -101,7 +102,7 @@ class MainWindow:
         self.root.bind('<F5>', lambda e: self._refresh_comparison())
     
     def _create_widgets(self):
-        """Create the main widgets"""
+        """Create the main widgets with tabbed interface"""
         # Main frame
         main_frame = ttk.Frame(self.root)
         main_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
@@ -129,28 +130,54 @@ class MainWindow:
         control_frame = ttk.Frame(main_frame)
         control_frame.grid(row=1, column=0, sticky="ew", pady=(0, 5))
         
-        # Compare button
-        self.compare_button = ttk.Button(control_frame, text="Compare Directories", command=self._start_comparison)
-        self.compare_button.pack(side="left", padx=(0, 5))
+        # Progress bar and status
+        progress_frame = ttk.Frame(control_frame)
+        progress_frame.pack(fill="x", expand=True)
         
-        # Compare Structure button
-        self.structure_button = ttk.Button(control_frame, text="Compare Structure", command=self._start_structure_comparison)
-        self.structure_button.pack(side="left", padx=(0, 10))
-        
-        # Cancel button
-        self.cancel_button = ttk.Button(control_frame, text="Cancel", command=self._cancel_comparison, state="disabled")
-        self.cancel_button.pack(side="left", padx=(0, 10))
-        
-        # Progress bar
+        # Progress info
         self.progress_var = tk.StringVar(value="Ready")
-        ttk.Label(control_frame, textvariable=self.progress_var).pack(side="left", padx=(10, 0))
+        ttk.Label(progress_frame, textvariable=self.progress_var).pack(side="left")
         
-        self.progress_bar = ttk.Progressbar(control_frame, mode='determinate')
+        self.progress_bar = ttk.Progressbar(progress_frame, mode='determinate')
         self.progress_bar.pack(side="right", fill="x", expand=True, padx=(10, 0))
         
+        # Create notebook for tabs
+        self.notebook = ttk.Notebook(main_frame)
+        self.notebook.grid(row=2, column=0, sticky="nsew")
+        
+        # Content Comparison Tab
+        self._create_content_tab()
+        
+        # Structure Comparison Tab
+        self._create_structure_tab()
+        
+        # Status bar
+        self.status_var = tk.StringVar(value="Ready")
+        status_bar = ttk.Label(main_frame, textvariable=self.status_var, relief="sunken")
+        status_bar.grid(row=3, column=0, sticky="ew", pady=(5, 0))
+    
+    def _create_content_tab(self):
+        """Create the content comparison tab"""
+        # Content tab frame
+        content_frame = ttk.Frame(self.notebook)
+        content_frame.grid_columnconfigure(0, weight=1)
+        content_frame.grid_rowconfigure(1, weight=1)
+        
+        # Control frame for content tab
+        content_control_frame = ttk.Frame(content_frame)
+        content_control_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
+        
+        # Compare button
+        self.compare_button = ttk.Button(content_control_frame, text="Compare Directories", command=self._start_comparison)
+        self.compare_button.pack(side="left", padx=(0, 5))
+        
+        # Cancel button
+        self.cancel_button = ttk.Button(content_control_frame, text="Cancel", command=self._cancel_comparison, state="disabled")
+        self.cancel_button.pack(side="left", padx=(0, 10))
+        
         # Results frame (PanedWindow for resizable panes)
-        self.paned_window = ttk.PanedWindow(main_frame, orient="horizontal")
-        self.paned_window.grid(row=2, column=0, sticky="nsew")
+        self.paned_window = ttk.PanedWindow(content_frame, orient="horizontal")
+        self.paned_window.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
         
         # Left pane - comparison tree
         tree_frame = ttk.LabelFrame(self.paned_window, text="Comparison Results")
@@ -166,10 +193,38 @@ class MainWindow:
         viewer_frame.grid_rowconfigure(0, weight=1)
         self.paned_window.add(viewer_frame, weight=2)
         
-        # Status bar
-        self.status_var = tk.StringVar(value="Ready")
-        status_bar = ttk.Label(main_frame, textvariable=self.status_var, relief="sunken")
-        status_bar.grid(row=3, column=0, sticky="ew", pady=(5, 0))
+        # Add tab to notebook
+        self.notebook.add(content_frame, text="Content Comparison")
+        
+    def _create_structure_tab(self):
+        """Create the structure comparison tab"""
+        # Structure tab frame
+        structure_frame = ttk.Frame(self.notebook)
+        structure_frame.grid_columnconfigure(0, weight=1)
+        structure_frame.grid_rowconfigure(1, weight=1)
+        
+        # Control frame for structure tab
+        structure_control_frame = ttk.LabelFrame(structure_frame, text="Structure Analysis Controls")
+        structure_control_frame.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
+        
+        # Compare Structure button
+        self.structure_button = ttk.Button(structure_control_frame, text="🌳 Compare Structure", command=self._start_structure_comparison)
+        self.structure_button.pack(side="left", padx=10, pady=5)
+        
+        # Cancel Structure button
+        self.cancel_structure_button = ttk.Button(structure_control_frame, text="Cancel", command=self._cancel_structure_comparison, state="disabled")
+        self.cancel_structure_button.pack(side="left", padx=(5, 10), pady=5)
+        
+        # Structure tree view
+        tree_container = ttk.Frame(structure_frame)
+        tree_container.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
+        tree_container.grid_columnconfigure(0, weight=1)
+        tree_container.grid_rowconfigure(0, weight=1)
+        
+        self.structure_tree = StructureTreeView(tree_container, self._on_directory_selected)
+        
+        # Add tab to notebook
+        self.notebook.add(structure_frame, text="Structure Comparison")
     
     def _browse_left_directory(self):
         """Browse for left directory"""
@@ -188,6 +243,25 @@ class MainWindow:
         )
         if directory:
             self.right_path.set(directory)
+    
+    def _on_directory_selected(self, directory_path: str):
+        """Handle directory selection in structure tree"""
+        # Update status bar to show selected directory
+        self.status_var.set(f"Selected: {directory_path}")
+        
+        # Switch to structure tab if not already there
+        self.notebook.select(1)  # Structure tab is index 1
+    
+    def _cancel_structure_comparison(self):
+        """Cancel structure comparison"""
+        if self.structure_thread and self.structure_thread.is_alive():
+            self.directory_scanner.cancel_comparison()
+            self.structure_thread.join(timeout=1.0)
+        
+        self.cancel_structure_button.config(state="disabled")
+        self.structure_button.config(state="normal")
+        self.progress_var.set("Cancelled")
+        self.progress_bar.config(value=0)
     
     def _start_comparison(self):
         """Start directory comparison"""
@@ -311,23 +385,27 @@ class MainWindow:
         
         # Load scan configuration and apply it
         try:
-            scan_config = self.yaml_config_manager.get_scan_configuration()
+            # Use structure-specific configuration
+            structure_config = self.yaml_config_manager.get_structure_comparison_config()
             
-            # Update directory scanner with current configuration
-            self.directory_scanner = DirectoryScanner.from_config(self.yaml_config_manager)
+            # Update directory scanner with structure comparison configuration
+            self.directory_scanner = DirectoryScanner.from_config(self.yaml_config_manager, "structure")
             
         except Exception as e:
             messagebox.showwarning("Configuration Warning", 
-                                 f"Failed to load scan configuration: {str(e)}\n"
+                                 f"Failed to load structure comparison configuration: {str(e)}\n"
                                  "Using default settings.")
         
-        # Clear previous results
-        self._clear_results()
+        # Switch to structure tab
+        self.notebook.select(1)  # Structure tab is index 1
+        
+        # Clear previous structure results
+        self.structure_tree.clear()
         
         # Update UI for structure comparison
         self.compare_button.config(state="disabled")
         self.structure_button.config(state="disabled")
-        self.cancel_button.config(state="normal")
+        self.cancel_structure_button.config(state="normal")
         self.progress_bar.config(value=0)
         self.progress_var.set("Starting structure comparison...")
         self.status_var.set("Comparing directory structures...")
@@ -343,9 +421,17 @@ class MainWindow:
         """Handle progress updates from structure comparison"""
         def update_ui():
             if total > 0:
+                # Comparison phase - show percentage
                 progress = (current / total) * 100
                 self.progress_bar.config(value=progress)
-                self.progress_var.set(f"Scanning {current}/{total}: {os.path.basename(current_path)}")
+                self.progress_var.set(f"Analyzing {current}/{total}: {os.path.basename(current_path)}")
+            else:
+                # Scanning phase - show indeterminate progress
+                self.progress_bar.config(mode='indeterminate')
+                if not hasattr(self, '_progress_started') or not self._progress_started:
+                    self.progress_bar.start(10)  # Start indeterminate animation
+                    self._progress_started = True
+                self.progress_var.set(current_path)
         
         # Schedule UI update in main thread
         self.root.after(0, update_ui)
@@ -353,20 +439,28 @@ class MainWindow:
     def _on_structure_comparison_complete(self, structure_comparison: Optional[StructureComparison]):
         """Handle completion of structure comparison"""
         def update_ui():
+            # Stop indeterminate progress and reset
+            if hasattr(self, '_progress_started') and self._progress_started:
+                self.progress_bar.stop()
+                self._progress_started = False
+            
+            self.progress_bar.config(mode='determinate', value=0)
             self.compare_button.config(state="normal")
             self.structure_button.config(state="normal")
-            self.cancel_button.config(state="disabled")
-            self.progress_bar.config(value=0)
+            self.cancel_structure_button.config(state="disabled")
             
             if structure_comparison:
                 self.current_structure_comparison = structure_comparison
-                self._display_structure_comparison(structure_comparison)
+                
+                # Display in the new structure tree
+                left_path = self.left_path.get().strip()
+                right_path = self.right_path.get().strip()
+                self.structure_tree.display_structure_comparison(structure_comparison, left_path, right_path)
                 
                 # Update status
-                summary = f"Structure comparison complete: {len(structure_comparison.common_files)} common files, " \
-                         f"{len(structure_comparison.common_directories)} common dirs, " \
-                         f"{len(structure_comparison.added_paths)} added, " \
-                         f"{len(structure_comparison.removed_paths)} removed"
+                summary = f"Structure comparison complete: {len(structure_comparison.common_directories)} common dirs, " \
+                         f"{len(structure_comparison.added_directories)} added, " \
+                         f"{len(structure_comparison.removed_directories)} removed"
                 
                 self.progress_var.set("Structure comparison complete")
                 self.status_var.set(summary)
@@ -377,93 +471,6 @@ class MainWindow:
         
         # Schedule UI update in main thread
         self.root.after(0, update_ui)
-    
-    def _display_structure_comparison(self, structure_comparison: StructureComparison):
-        """Display structure comparison results in the tree view"""
-        # For now, we'll create a simplified DirectoryComparison object to display in the existing tree
-        # In the future, we might want to create a specialized structure tree view
-        
-        from datetime import datetime
-        from ..core.file_comparator import FileDifference, FileInfo
-        
-        # Create dummy file differences for the tree view
-        file_differences = {}
-        dummy_time = datetime.now()
-        
-        # Add added directories
-        for directory_path in structure_comparison.added_directories:
-            file_diff = FileDifference(
-                file_path=directory_path,
-                left_info=None,
-                right_info=FileInfo(
-                    path=directory_path,
-                    size=0,  # We don't analyze sizes in structure comparison
-                    modified_time=dummy_time,
-                    permissions="",
-                    exists=True,
-                    hash_sha256=""
-                ),
-                status="added"
-            )
-            file_differences[directory_path] = file_diff
-        
-        # Add removed directories
-        for directory_path in structure_comparison.removed_directories:
-            file_diff = FileDifference(
-                file_path=directory_path,
-                left_info=FileInfo(
-                    path=directory_path,
-                    size=0,
-                    modified_time=dummy_time,
-                    permissions="",
-                    exists=True,
-                    hash_sha256=""
-                ),
-                right_info=None,
-                status="removed"
-            )
-            file_differences[directory_path] = file_diff
-        
-        # Add common directories as identical (no content analysis done)
-        for directory_path in structure_comparison.common_directories:
-            file_diff = FileDifference(
-                file_path=directory_path,
-                left_info=FileInfo(
-                    path=directory_path,
-                    size=0,
-                    modified_time=dummy_time,
-                    permissions="",
-                    exists=True,
-                    hash_sha256=""
-                ),
-                right_info=FileInfo(
-                    path=directory_path,
-                    size=0,
-                    modified_time=dummy_time,
-                    permissions="",
-                    exists=True,
-                    hash_sha256=""
-                ),
-                status="identical"
-            )
-            file_differences[directory_path] = file_diff
-        
-        # Create a DirectoryComparison-like object for display (treating directories as files for tree display)
-        display_comparison = DirectoryComparison(
-            added_files=structure_comparison.added_directories,
-            removed_files=structure_comparison.removed_directories,
-            modified_files=[],  # No content analysis, so no modified files
-            identical_files=structure_comparison.common_directories,
-            file_differences=file_differences,
-            total_files=structure_comparison.total_directories,
-            processed_files=structure_comparison.processed_directories
-        )
-        
-        # Display in the tree view
-        self.comparison_tree.display_comparison(display_comparison)
-        
-        # Store both comparisons
-        self.current_comparison = display_comparison
     
     def _on_file_selected(self, file_path: str, file_diff):
         """Handle file selection in the comparison tree"""
@@ -488,7 +495,9 @@ class MainWindow:
     def _clear_results(self):
         """Clear comparison results"""
         self.current_comparison = None
+        self.current_structure_comparison = None
         self.comparison_tree.clear()
+        self.structure_tree.clear()
         self.file_viewer.clear()
         self.progress_var.set("Ready")
         self.status_var.set("Ready")

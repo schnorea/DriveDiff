@@ -7,7 +7,14 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, scrolledtext
 import os
 from typing import Dict, Any, List, Optional
-from ..utils.yaml_config import YamlConfigManager
+
+try:
+    from ..utils.yaml_config import YamlConfigManager
+except ImportError:
+    # For direct execution or testing
+    import sys
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+    from utils.yaml_config import YamlConfigManager
 
 class ConfigurationDialog:
     """Configuration dialog for YAML settings"""
@@ -55,8 +62,8 @@ class ConfigurationDialog:
         self.notebook.grid(row=0, column=0, sticky="nsew", pady=(0, 10))
         
         # Create tabs
-        self._create_paths_tab()
-        self._create_patterns_tab()
+        self._create_directory_comparison_tab()
+        self._create_structure_comparison_tab()
         self._create_performance_tab()
         self._create_advanced_tab()
         
@@ -74,14 +81,14 @@ class ConfigurationDialog:
         ttk.Button(button_frame, text="Apply", command=self._on_apply).pack(side="right", padx=(0, 5))
         ttk.Button(button_frame, text="OK", command=self._on_ok).pack(side="right", padx=(0, 5))
     
-    def _create_paths_tab(self):
-        """Create paths configuration tab"""
-        paths_frame = ttk.Frame(self.notebook)
-        self.notebook.add(paths_frame, text="Paths")
+    def _create_directory_comparison_tab(self):
+        """Create directory comparison configuration tab"""
+        dir_frame = ttk.Frame(self.notebook)
+        self.notebook.add(dir_frame, text="📁 Directory Comparison")
         
         # Main container with scrollbar
-        canvas = tk.Canvas(paths_frame)
-        scrollbar = ttk.Scrollbar(paths_frame, orient="vertical", command=canvas.yview)
+        canvas = tk.Canvas(dir_frame)
+        scrollbar = ttk.Scrollbar(dir_frame, orient="vertical", command=canvas.yview)
         scrollable_frame = ttk.Frame(canvas)
         
         scrollable_frame.bind(
@@ -91,6 +98,12 @@ class ConfigurationDialog:
         
         canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Info label
+        info_label = ttk.Label(scrollable_frame, 
+                              text="Configuration for detailed file content comparison",
+                              font=("TkDefaultFont", 10, "bold"))
+        info_label.pack(padx=5, pady=5, anchor="w")
         
         # Logging level
         logging_frame = ttk.LabelFrame(scrollable_frame, text="Logging Configuration")
@@ -105,37 +118,37 @@ class ConfigurationDialog:
         logging_frame.grid_columnconfigure(1, weight=1)
         
         # Scan paths
-        scan_frame = ttk.LabelFrame(scrollable_frame, text="Scan Paths")
+        scan_frame = ttk.LabelFrame(scrollable_frame, text="Scan Paths (Directory Comparison)")
         scan_frame.pack(fill="both", expand=True, padx=5, pady=5)
         
-        ttk.Label(scan_frame, text="Directories to scan:").pack(anchor="w", padx=5, pady=(5, 0))
+        ttk.Label(scan_frame, text="Directories to scan (leave empty to scan entire directory):").pack(anchor="w", padx=5, pady=(5, 0))
         
         # Scan paths listbox with scrollbar
         scan_list_frame = ttk.Frame(scan_frame)
         scan_list_frame.pack(fill="both", expand=True, padx=5, pady=5)
         
-        self.scan_paths_listbox = tk.Listbox(scan_list_frame, height=6)
-        scan_scrollbar = ttk.Scrollbar(scan_list_frame, orient="vertical", command=self.scan_paths_listbox.yview)
-        self.scan_paths_listbox.configure(yscrollcommand=scan_scrollbar.set)
+        self.dir_scan_paths_listbox = tk.Listbox(scan_list_frame, height=4)
+        scan_scrollbar = ttk.Scrollbar(scan_list_frame, orient="vertical", command=self.dir_scan_paths_listbox.yview)
+        self.dir_scan_paths_listbox.configure(yscrollcommand=scan_scrollbar.set)
         
-        self.scan_paths_listbox.pack(side="left", fill="both", expand=True)
+        self.dir_scan_paths_listbox.pack(side="left", fill="both", expand=True)
         scan_scrollbar.pack(side="right", fill="y")
         
         # Scan paths buttons
         scan_btn_frame = ttk.Frame(scan_frame)
         scan_btn_frame.pack(fill="x", padx=5, pady=(0, 5))
         
-        self.scan_path_var = tk.StringVar()
-        scan_entry = ttk.Entry(scan_btn_frame, textvariable=self.scan_path_var)
+        self.dir_scan_path_var = tk.StringVar()
+        scan_entry = ttk.Entry(scan_btn_frame, textvariable=self.dir_scan_path_var)
         scan_entry.pack(side="left", fill="x", expand=True, padx=(0, 5))
-        scan_entry.bind("<Return>", lambda e: self._add_scan_path())
+        scan_entry.bind("<Return>", lambda e: self._add_dir_scan_path())
         
-        ttk.Button(scan_btn_frame, text="Browse...", command=self._browse_scan_path).pack(side="right", padx=(0, 5))
-        ttk.Button(scan_btn_frame, text="Add", command=self._add_scan_path).pack(side="right", padx=(0, 5))
-        ttk.Button(scan_btn_frame, text="Remove", command=self._remove_scan_path).pack(side="right")
+        ttk.Button(scan_btn_frame, text="Browse...", command=self._browse_dir_scan_path).pack(side="right", padx=(0, 5))
+        ttk.Button(scan_btn_frame, text="Add", command=self._add_dir_scan_path).pack(side="right", padx=(0, 5))
+        ttk.Button(scan_btn_frame, text="Remove", command=self._remove_dir_scan_path).pack(side="right")
         
         # Exclude paths
-        exclude_frame = ttk.LabelFrame(scrollable_frame, text="Exclude Paths")
+        exclude_frame = ttk.LabelFrame(scrollable_frame, text="Exclude Paths (Directory Comparison)")
         exclude_frame.pack(fill="both", expand=True, padx=5, pady=5)
         
         ttk.Label(exclude_frame, text="Directories to exclude:").pack(anchor="w", padx=5, pady=(5, 0))
@@ -144,37 +157,28 @@ class ConfigurationDialog:
         exclude_list_frame = ttk.Frame(exclude_frame)
         exclude_list_frame.pack(fill="both", expand=True, padx=5, pady=5)
         
-        self.exclude_paths_listbox = tk.Listbox(exclude_list_frame, height=6)
-        exclude_scrollbar = ttk.Scrollbar(exclude_list_frame, orient="vertical", command=self.exclude_paths_listbox.yview)
-        self.exclude_paths_listbox.configure(yscrollcommand=exclude_scrollbar.set)
+        self.dir_exclude_paths_listbox = tk.Listbox(exclude_list_frame, height=4)
+        exclude_scrollbar = ttk.Scrollbar(exclude_list_frame, orient="vertical", command=self.dir_exclude_paths_listbox.yview)
+        self.dir_exclude_paths_listbox.configure(yscrollcommand=exclude_scrollbar.set)
         
-        self.exclude_paths_listbox.pack(side="left", fill="both", expand=True)
+        self.dir_exclude_paths_listbox.pack(side="left", fill="both", expand=True)
         exclude_scrollbar.pack(side="right", fill="y")
         
         # Exclude paths buttons
         exclude_btn_frame = ttk.Frame(exclude_frame)
         exclude_btn_frame.pack(fill="x", padx=5, pady=(0, 5))
         
-        self.exclude_path_var = tk.StringVar()
-        exclude_entry = ttk.Entry(exclude_btn_frame, textvariable=self.exclude_path_var)
+        self.dir_exclude_path_var = tk.StringVar()
+        exclude_entry = ttk.Entry(exclude_btn_frame, textvariable=self.dir_exclude_path_var)
         exclude_entry.pack(side="left", fill="x", expand=True, padx=(0, 5))
-        exclude_entry.bind("<Return>", lambda e: self._add_exclude_path())
+        exclude_entry.bind("<Return>", lambda e: self._add_dir_exclude_path())
         
-        ttk.Button(exclude_btn_frame, text="Browse...", command=self._browse_exclude_path).pack(side="right", padx=(0, 5))
-        ttk.Button(exclude_btn_frame, text="Add", command=self._add_exclude_path).pack(side="right", padx=(0, 5))
-        ttk.Button(exclude_btn_frame, text="Remove", command=self._remove_exclude_path).pack(side="right")
-        
-        # Pack canvas and scrollbar
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-    
-    def _create_patterns_tab(self):
-        """Create patterns configuration tab"""
-        patterns_frame = ttk.Frame(self.notebook)
-        self.notebook.add(patterns_frame, text="Patterns")
+        ttk.Button(exclude_btn_frame, text="Browse...", command=self._browse_dir_exclude_path).pack(side="right", padx=(0, 5))
+        ttk.Button(exclude_btn_frame, text="Add", command=self._add_dir_exclude_path).pack(side="right", padx=(0, 5))
+        ttk.Button(exclude_btn_frame, text="Remove", command=self._remove_dir_exclude_path).pack(side="right")
         
         # Include patterns
-        include_frame = ttk.LabelFrame(patterns_frame, text="Include Patterns")
+        include_frame = ttk.LabelFrame(scrollable_frame, text="Include Patterns (Directory Comparison)")
         include_frame.pack(fill="both", expand=True, padx=5, pady=5)
         
         ttk.Label(include_frame, text="File patterns to include (glob patterns):").pack(anchor="w", padx=5, pady=(5, 0))
@@ -183,62 +187,182 @@ class ConfigurationDialog:
         include_list_frame = ttk.Frame(include_frame)
         include_list_frame.pack(fill="both", expand=True, padx=5, pady=5)
         
-        self.include_patterns_listbox = tk.Listbox(include_list_frame)
-        include_scrollbar = ttk.Scrollbar(include_list_frame, orient="vertical", command=self.include_patterns_listbox.yview)
-        self.include_patterns_listbox.configure(yscrollcommand=include_scrollbar.set)
+        self.dir_include_patterns_listbox = tk.Listbox(include_list_frame, height=3)
+        include_scrollbar = ttk.Scrollbar(include_list_frame, orient="vertical", command=self.dir_include_patterns_listbox.yview)
+        self.dir_include_patterns_listbox.configure(yscrollcommand=include_scrollbar.set)
         
-        self.include_patterns_listbox.pack(side="left", fill="both", expand=True)
+        self.dir_include_patterns_listbox.pack(side="left", fill="both", expand=True)
         include_scrollbar.pack(side="right", fill="y")
         
         # Include patterns buttons
         include_btn_frame = ttk.Frame(include_frame)
         include_btn_frame.pack(fill="x", padx=5, pady=(0, 5))
         
-        self.include_pattern_var = tk.StringVar()
-        include_entry = ttk.Entry(include_btn_frame, textvariable=self.include_pattern_var)
+        self.dir_include_pattern_var = tk.StringVar()
+        include_entry = ttk.Entry(include_btn_frame, textvariable=self.dir_include_pattern_var)
         include_entry.pack(side="left", fill="x", expand=True, padx=(0, 5))
-        include_entry.bind("<Return>", lambda e: self._add_include_pattern())
+        include_entry.bind("<Return>", lambda e: self._add_dir_include_pattern())
         
-        ttk.Button(include_btn_frame, text="Add", command=self._add_include_pattern).pack(side="right", padx=(0, 5))
-        ttk.Button(include_btn_frame, text="Remove", command=self._remove_include_pattern).pack(side="right")
+        ttk.Button(include_btn_frame, text="Add", command=self._add_dir_include_pattern).pack(side="right", padx=(0, 5))
+        ttk.Button(include_btn_frame, text="Remove", command=self._remove_dir_include_pattern).pack(side="right")
         
         # Exclude patterns
-        exclude_patterns_frame = ttk.LabelFrame(patterns_frame, text="Exclude Patterns")
-        exclude_patterns_frame.pack(fill="both", expand=True, padx=5, pady=5)
+        exclude_pat_frame = ttk.LabelFrame(scrollable_frame, text="Exclude Patterns (Directory Comparison)")
+        exclude_pat_frame.pack(fill="both", expand=True, padx=5, pady=5)
         
-        ttk.Label(exclude_patterns_frame, text="File patterns to exclude (glob patterns):").pack(anchor="w", padx=5, pady=(5, 0))
+        ttk.Label(exclude_pat_frame, text="File/directory patterns to exclude (glob patterns):").pack(anchor="w", padx=5, pady=(5, 0))
         
         # Exclude patterns listbox
-        exclude_patterns_list_frame = ttk.Frame(exclude_patterns_frame)
-        exclude_patterns_list_frame.pack(fill="both", expand=True, padx=5, pady=5)
+        exclude_pat_list_frame = ttk.Frame(exclude_pat_frame)
+        exclude_pat_list_frame.pack(fill="both", expand=True, padx=5, pady=5)
         
-        self.exclude_patterns_listbox = tk.Listbox(exclude_patterns_list_frame)
-        exclude_patterns_scrollbar = ttk.Scrollbar(exclude_patterns_list_frame, orient="vertical", command=self.exclude_patterns_listbox.yview)
-        self.exclude_patterns_listbox.configure(yscrollcommand=exclude_patterns_scrollbar.set)
+        self.dir_exclude_patterns_listbox = tk.Listbox(exclude_pat_list_frame, height=4)
+        exclude_pat_scrollbar = ttk.Scrollbar(exclude_pat_list_frame, orient="vertical", command=self.dir_exclude_patterns_listbox.yview)
+        self.dir_exclude_patterns_listbox.configure(yscrollcommand=exclude_pat_scrollbar.set)
         
-        self.exclude_patterns_listbox.pack(side="left", fill="both", expand=True)
-        exclude_patterns_scrollbar.pack(side="right", fill="y")
+        self.dir_exclude_patterns_listbox.pack(side="left", fill="both", expand=True)
+        exclude_pat_scrollbar.pack(side="right", fill="y")
         
         # Exclude patterns buttons
-        exclude_patterns_btn_frame = ttk.Frame(exclude_patterns_frame)
-        exclude_patterns_btn_frame.pack(fill="x", padx=5, pady=(0, 5))
+        exclude_pat_btn_frame = ttk.Frame(exclude_pat_frame)
+        exclude_pat_btn_frame.pack(fill="x", padx=5, pady=(0, 5))
         
-        self.exclude_pattern_var = tk.StringVar()
-        exclude_patterns_entry = ttk.Entry(exclude_patterns_btn_frame, textvariable=self.exclude_pattern_var)
-        exclude_patterns_entry.pack(side="left", fill="x", expand=True, padx=(0, 5))
-        exclude_patterns_entry.bind("<Return>", lambda e: self._add_exclude_pattern())
+        self.dir_exclude_pattern_var = tk.StringVar()
+        exclude_pat_entry = ttk.Entry(exclude_pat_btn_frame, textvariable=self.dir_exclude_pattern_var)
+        exclude_pat_entry.pack(side="left", fill="x", expand=True, padx=(0, 5))
+        exclude_pat_entry.bind("<Return>", lambda e: self._add_dir_exclude_pattern())
         
-        ttk.Button(exclude_patterns_btn_frame, text="Add", command=self._add_exclude_pattern).pack(side="right", padx=(0, 5))
-        ttk.Button(exclude_patterns_btn_frame, text="Remove", command=self._remove_exclude_pattern).pack(side="right")
+        ttk.Button(exclude_pat_btn_frame, text="Add", command=self._add_dir_exclude_pattern).pack(side="right", padx=(0, 5))
+        ttk.Button(exclude_pat_btn_frame, text="Remove", command=self._remove_dir_exclude_pattern).pack(side="right")
         
-        # Common patterns buttons
-        common_frame = ttk.Frame(patterns_frame)
-        common_frame.pack(fill="x", padx=5, pady=5)
+        # Pack canvas and scrollbar
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+    def _create_structure_comparison_tab(self):
+        """Create structure comparison configuration tab"""
+        struct_frame = ttk.Frame(self.notebook)
+        self.notebook.add(struct_frame, text="🌳 Structure Comparison")
         
-        ttk.Label(common_frame, text="Quick Add:").pack(side="left")
-        ttk.Button(common_frame, text="Common Include", command=self._add_common_include_patterns).pack(side="left", padx=(10, 5))
-        ttk.Button(common_frame, text="Common Exclude", command=self._add_common_exclude_patterns).pack(side="left")
-    
+        # Main container with scrollbar
+        canvas = tk.Canvas(struct_frame)
+        scrollbar = ttk.Scrollbar(struct_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Info label
+        info_label = ttk.Label(scrollable_frame, 
+                              text="Configuration for directory structure analysis (no file content comparison)",
+                              font=("TkDefaultFont", 10, "bold"))
+        info_label.pack(padx=5, pady=5, anchor="w")
+        
+        # Scan paths
+        scan_frame = ttk.LabelFrame(scrollable_frame, text="Scan Paths (Structure Comparison)")
+        scan_frame.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        ttk.Label(scan_frame, text="Directories to scan (leave empty to scan entire directory):").pack(anchor="w", padx=5, pady=(5, 0))
+        
+        # Scan paths listbox with scrollbar
+        scan_list_frame = ttk.Frame(scan_frame)
+        scan_list_frame.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        self.struct_scan_paths_listbox = tk.Listbox(scan_list_frame, height=4)
+        scan_scrollbar = ttk.Scrollbar(scan_list_frame, orient="vertical", command=self.struct_scan_paths_listbox.yview)
+        self.struct_scan_paths_listbox.configure(yscrollcommand=scan_scrollbar.set)
+        
+        self.struct_scan_paths_listbox.pack(side="left", fill="both", expand=True)
+        scan_scrollbar.pack(side="right", fill="y")
+        
+        # Scan paths buttons
+        scan_btn_frame = ttk.Frame(scan_frame)
+        scan_btn_frame.pack(fill="x", padx=5, pady=(0, 5))
+        
+        self.struct_scan_path_var = tk.StringVar()
+        scan_entry = ttk.Entry(scan_btn_frame, textvariable=self.struct_scan_path_var)
+        scan_entry.pack(side="left", fill="x", expand=True, padx=(0, 5))
+        scan_entry.bind("<Return>", lambda e: self._add_struct_scan_path())
+        
+        ttk.Button(scan_btn_frame, text="Browse...", command=self._browse_struct_scan_path).pack(side="right", padx=(0, 5))
+        ttk.Button(scan_btn_frame, text="Add", command=self._add_struct_scan_path).pack(side="right", padx=(0, 5))
+        ttk.Button(scan_btn_frame, text="Remove", command=self._remove_struct_scan_path).pack(side="right")
+        
+        # Exclude paths
+        exclude_frame = ttk.LabelFrame(scrollable_frame, text="Exclude Paths (Structure Comparison)")
+        exclude_frame.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        ttk.Label(exclude_frame, text="Directories to exclude:").pack(anchor="w", padx=5, pady=(5, 0))
+        
+        # Exclude paths listbox with scrollbar
+        exclude_list_frame = ttk.Frame(exclude_frame)
+        exclude_list_frame.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        self.struct_exclude_paths_listbox = tk.Listbox(exclude_list_frame, height=5)
+        exclude_scrollbar = ttk.Scrollbar(exclude_list_frame, orient="vertical", command=self.struct_exclude_paths_listbox.yview)
+        self.struct_exclude_paths_listbox.configure(yscrollcommand=exclude_scrollbar.set)
+        
+        self.struct_exclude_paths_listbox.pack(side="left", fill="both", expand=True)
+        exclude_scrollbar.pack(side="right", fill="y")
+        
+        # Exclude paths buttons
+        exclude_btn_frame = ttk.Frame(exclude_frame)
+        exclude_btn_frame.pack(fill="x", padx=5, pady=(0, 5))
+        
+        self.struct_exclude_path_var = tk.StringVar()
+        exclude_entry = ttk.Entry(exclude_btn_frame, textvariable=self.struct_exclude_path_var)
+        exclude_entry.pack(side="left", fill="x", expand=True, padx=(0, 5))
+        exclude_entry.bind("<Return>", lambda e: self._add_struct_exclude_path())
+        
+        ttk.Button(exclude_btn_frame, text="Browse...", command=self._browse_struct_exclude_path).pack(side="right", padx=(0, 5))
+        ttk.Button(exclude_btn_frame, text="Add", command=self._add_struct_exclude_path).pack(side="right", padx=(0, 5))
+        ttk.Button(exclude_btn_frame, text="Remove", command=self._remove_struct_exclude_path).pack(side="right")
+        
+        # Exclude patterns
+        exclude_pat_frame = ttk.LabelFrame(scrollable_frame, text="Exclude Patterns (Structure Comparison)")
+        exclude_pat_frame.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        ttk.Label(exclude_pat_frame, text="Directory patterns to exclude (glob patterns):").pack(anchor="w", padx=5, pady=(5, 0))
+        
+        # Exclude patterns listbox
+        exclude_pat_list_frame = ttk.Frame(exclude_pat_frame)
+        exclude_pat_list_frame.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        self.struct_exclude_patterns_listbox = tk.Listbox(exclude_pat_list_frame, height=5)
+        exclude_pat_scrollbar = ttk.Scrollbar(exclude_pat_list_frame, orient="vertical", command=self.struct_exclude_patterns_listbox.yview)
+        self.struct_exclude_patterns_listbox.configure(yscrollcommand=exclude_pat_scrollbar.set)
+        
+        self.struct_exclude_patterns_listbox.pack(side="left", fill="both", expand=True)
+        exclude_pat_scrollbar.pack(side="right", fill="y")
+        
+        # Exclude patterns buttons
+        exclude_pat_btn_frame = ttk.Frame(exclude_pat_frame)
+        exclude_pat_btn_frame.pack(fill="x", padx=5, pady=(0, 5))
+        
+        self.struct_exclude_pattern_var = tk.StringVar()
+        exclude_pat_entry = ttk.Entry(exclude_pat_btn_frame, textvariable=self.struct_exclude_pattern_var)
+        exclude_pat_entry.pack(side="left", fill="x", expand=True, padx=(0, 5))
+        exclude_pat_entry.bind("<Return>", lambda e: self._add_struct_exclude_pattern())
+        
+        ttk.Button(exclude_pat_btn_frame, text="Add", command=self._add_struct_exclude_pattern).pack(side="right", padx=(0, 5))
+        ttk.Button(exclude_pat_btn_frame, text="Remove", command=self._remove_struct_exclude_pattern).pack(side="right")
+        
+        # Note about include patterns
+        note_frame = ttk.LabelFrame(scrollable_frame, text="Note")
+        note_frame.pack(fill="x", padx=5, pady=5)
+        
+        note_text = "Structure comparison focuses on directory structure only.\nFile include patterns are not used in structure analysis."
+        ttk.Label(note_frame, text=note_text, justify="left").pack(padx=5, pady=5)
+        
+        # Pack canvas and scrollbar
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
     def _create_performance_tab(self):
         """Create performance configuration tab"""
         perf_frame = ttk.Frame(self.notebook)
@@ -331,34 +455,55 @@ Memory Usage:
     def _load_configuration(self):
         """Load configuration into the dialog"""
         try:
-            self.current_config = self.config_manager.load_config()
+            # Don't overwrite current_config if it's already set
+            # This preserves imported configurations
+            if not hasattr(self, 'current_config') or not self.current_config:
+                self.current_config = self.config_manager.load_config()
             
             # Load logging settings
             logging_config = self.current_config.get('logging', {})
             self.log_level_var.set(logging_config.get('level', 'INFO'))
             
-            # Load paths
-            paths_config = self.current_config.get('paths', {})
+            # Load directory comparison configuration
+            dir_config = self.config_manager.get_directory_comparison_config(self.current_config)
             
-            # Scan paths
-            self.scan_paths_listbox.delete(0, tk.END)
-            for path in paths_config.get('scan', []):
-                self.scan_paths_listbox.insert(tk.END, path)
+            # Directory comparison - Scan paths
+            self.dir_scan_paths_listbox.delete(0, tk.END)
+            for path in dir_config.scan_paths:
+                self.dir_scan_paths_listbox.insert(tk.END, path)
             
-            # Exclude paths
-            self.exclude_paths_listbox.delete(0, tk.END)
-            for path in paths_config.get('exclude', []):
-                self.exclude_paths_listbox.insert(tk.END, path)
+            # Directory comparison - Exclude paths
+            self.dir_exclude_paths_listbox.delete(0, tk.END)
+            for path in dir_config.exclude_paths:
+                self.dir_exclude_paths_listbox.insert(tk.END, path)
             
-            # Include patterns
-            self.include_patterns_listbox.delete(0, tk.END)
-            for pattern in paths_config.get('include', []):
-                self.include_patterns_listbox.insert(tk.END, pattern)
+            # Directory comparison - Include patterns
+            self.dir_include_patterns_listbox.delete(0, tk.END)
+            for pattern in dir_config.include_patterns:
+                self.dir_include_patterns_listbox.insert(tk.END, pattern)
             
-            # Exclude patterns
-            self.exclude_patterns_listbox.delete(0, tk.END)
-            for pattern in paths_config.get('exclude_patterns', []):
-                self.exclude_patterns_listbox.insert(tk.END, pattern)
+            # Directory comparison - Exclude patterns
+            self.dir_exclude_patterns_listbox.delete(0, tk.END)
+            for pattern in dir_config.exclude_patterns:
+                self.dir_exclude_patterns_listbox.insert(tk.END, pattern)
+            
+            # Load structure comparison configuration
+            struct_config = self.config_manager.get_structure_comparison_config(self.current_config)
+            
+            # Structure comparison - Scan paths
+            self.struct_scan_paths_listbox.delete(0, tk.END)
+            for path in struct_config.scan_paths:
+                self.struct_scan_paths_listbox.insert(tk.END, path)
+            
+            # Structure comparison - Exclude paths
+            self.struct_exclude_paths_listbox.delete(0, tk.END)
+            for path in struct_config.exclude_paths:
+                self.struct_exclude_paths_listbox.insert(tk.END, path)
+            
+            # Structure comparison - Exclude patterns
+            self.struct_exclude_patterns_listbox.delete(0, tk.END)
+            for pattern in struct_config.exclude_patterns:
+                self.struct_exclude_patterns_listbox.insert(tk.END, pattern)
             
             # Load performance settings
             perf_config = self.current_config.get('performance', {})
@@ -366,11 +511,23 @@ Memory Usage:
             self.hash_chunk_var.set(str(perf_config.get('hash_chunk_size', 65536)))
             self.max_files_var.set(str(perf_config.get('max_files', 0)))
             
-            # Load YAML editor
-            self._refresh_yaml_from_form()
+            # Load YAML editor with the actual loaded configuration
+            self._refresh_yaml_editor()
             
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load configuration: {str(e)}", parent=self.dialog)
+    
+    def _refresh_yaml_editor(self):
+        """Refresh YAML editor with current configuration"""
+        try:
+            # Use the current_config directly instead of rebuilding from form
+            yaml_content = self.config_manager._format_yaml_for_display(self.current_config)
+            
+            self.yaml_editor.delete(1.0, tk.END)
+            self.yaml_editor.insert(1.0, yaml_content)
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to refresh YAML: {str(e)}", parent=self.dialog)
     
     def _refresh_yaml_from_form(self):
         """Refresh YAML editor from form data"""
@@ -440,11 +597,20 @@ Memory Usage:
             'logging': {
                 'level': self.log_level_var.get()
             },
-            'paths': {
-                'scan': list(self.scan_paths_listbox.get(0, tk.END)),
-                'exclude': list(self.exclude_paths_listbox.get(0, tk.END)),
-                'include': list(self.include_patterns_listbox.get(0, tk.END)),
-                'exclude_patterns': list(self.exclude_patterns_listbox.get(0, tk.END))
+            'directory_comparison': {
+                'paths': {
+                    'scan': list(self.dir_scan_paths_listbox.get(0, tk.END)),
+                    'exclude': list(self.dir_exclude_paths_listbox.get(0, tk.END)),
+                    'include': list(self.dir_include_patterns_listbox.get(0, tk.END)),
+                    'exclude_patterns': list(self.dir_exclude_patterns_listbox.get(0, tk.END))
+                }
+            },
+            'structure_comparison': {
+                'paths': {
+                    'scan': list(self.struct_scan_paths_listbox.get(0, tk.END)),
+                    'exclude': list(self.struct_exclude_paths_listbox.get(0, tk.END)),
+                    'exclude_patterns': list(self.struct_exclude_patterns_listbox.get(0, tk.END))
+                }
             },
             'performance': {
                 'worker_threads': int(self.worker_threads_var.get() or 4),
@@ -454,95 +620,135 @@ Memory Usage:
         }
         return config
     
-    # Path management methods
-    def _browse_scan_path(self):
-        """Browse for scan path"""
+    # Directory Comparison Tab Event Handlers
+    def _browse_dir_scan_path(self):
+        """Browse for directory scan path"""
         path = filedialog.askdirectory(title="Select Directory to Scan", parent=self.dialog)
         if path:
-            self.scan_path_var.set(path)
+            self.dir_scan_path_var.set(path)
     
-    def _add_scan_path(self):
-        """Add scan path to list"""
-        path = self.scan_path_var.get().strip()
-        if path and path not in self.scan_paths_listbox.get(0, tk.END):
-            self.scan_paths_listbox.insert(tk.END, path)
-            self.scan_path_var.set("")
+    def _add_dir_scan_path(self):
+        """Add directory scan path to list"""
+        path = self.dir_scan_path_var.get().strip()
+        if path and path not in self.dir_scan_paths_listbox.get(0, tk.END):
+            self.dir_scan_paths_listbox.insert(tk.END, path)
+            self.dir_scan_path_var.set("")
     
-    def _remove_scan_path(self):
-        """Remove selected scan path"""
-        selection = self.scan_paths_listbox.curselection()
+    def _remove_dir_scan_path(self):
+        """Remove selected directory scan path"""
+        selection = self.dir_scan_paths_listbox.curselection()
         if selection:
-            self.scan_paths_listbox.delete(selection[0])
+            self.dir_scan_paths_listbox.delete(selection[0])
     
-    def _browse_exclude_path(self):
-        """Browse for exclude path"""
+    def _browse_dir_exclude_path(self):
+        """Browse for directory exclude path"""
         path = filedialog.askdirectory(title="Select Directory to Exclude", parent=self.dialog)
         if path:
-            self.exclude_path_var.set(path)
+            self.dir_exclude_path_var.set(path)
     
-    def _add_exclude_path(self):
-        """Add exclude path to list"""
-        path = self.exclude_path_var.get().strip()
-        if path and path not in self.exclude_paths_listbox.get(0, tk.END):
-            self.exclude_paths_listbox.insert(tk.END, path)
-            self.exclude_path_var.set("")
+    def _add_dir_exclude_path(self):
+        """Add directory exclude path to list"""
+        path = self.dir_exclude_path_var.get().strip()
+        if path and path not in self.dir_exclude_paths_listbox.get(0, tk.END):
+            self.dir_exclude_paths_listbox.insert(tk.END, path)
+            self.dir_exclude_path_var.set("")
     
-    def _remove_exclude_path(self):
-        """Remove selected exclude path"""
-        selection = self.exclude_paths_listbox.curselection()
+    def _remove_dir_exclude_path(self):
+        """Remove selected directory exclude path"""
+        selection = self.dir_exclude_paths_listbox.curselection()
         if selection:
-            self.exclude_paths_listbox.delete(selection[0])
+            self.dir_exclude_paths_listbox.delete(selection[0])
     
-    # Pattern management methods
-    def _add_include_pattern(self):
-        """Add include pattern to list"""
-        pattern = self.include_pattern_var.get().strip()
-        if pattern and pattern not in self.include_patterns_listbox.get(0, tk.END):
-            self.include_patterns_listbox.insert(tk.END, pattern)
-            self.include_pattern_var.set("")
+    def _add_dir_include_pattern(self):
+        """Add directory include pattern to list"""
+        pattern = self.dir_include_pattern_var.get().strip()
+        if pattern and pattern not in self.dir_include_patterns_listbox.get(0, tk.END):
+            self.dir_include_patterns_listbox.insert(tk.END, pattern)
+            self.dir_include_pattern_var.set("")
     
-    def _remove_include_pattern(self):
-        """Remove selected include pattern"""
-        selection = self.include_patterns_listbox.curselection()
+    def _remove_dir_include_pattern(self):
+        """Remove selected directory include pattern"""
+        selection = self.dir_include_patterns_listbox.curselection()
         if selection:
-            self.include_patterns_listbox.delete(selection[0])
+            self.dir_include_patterns_listbox.delete(selection[0])
     
-    def _add_exclude_pattern(self):
-        """Add exclude pattern to list"""
-        pattern = self.exclude_pattern_var.get().strip()
-        if pattern and pattern not in self.exclude_patterns_listbox.get(0, tk.END):
-            self.exclude_patterns_listbox.insert(tk.END, pattern)
-            self.exclude_pattern_var.set("")
+    def _add_dir_exclude_pattern(self):
+        """Add directory exclude pattern to list"""
+        pattern = self.dir_exclude_pattern_var.get().strip()
+        if pattern and pattern not in self.dir_exclude_patterns_listbox.get(0, tk.END):
+            self.dir_exclude_patterns_listbox.insert(tk.END, pattern)
+            self.dir_exclude_pattern_var.set("")
     
-    def _remove_exclude_pattern(self):
-        """Remove selected exclude pattern"""
-        selection = self.exclude_patterns_listbox.curselection()
+    def _remove_dir_exclude_pattern(self):
+        """Remove selected directory exclude pattern"""
+        selection = self.dir_exclude_patterns_listbox.curselection()
         if selection:
-            self.exclude_patterns_listbox.delete(selection[0])
+            self.dir_exclude_patterns_listbox.delete(selection[0])
     
-    def _add_common_include_patterns(self):
-        """Add common include patterns"""
-        common_patterns = [
-            "*.conf", "*.config", "*.cfg", "*.ini", "*.json", "*.yaml", "*.yml",
-            "*.xml", "*.properties", "*.log", "*.txt", "*.sh", "*.py", "*.js"
-        ]
-        
-        existing = set(self.include_patterns_listbox.get(0, tk.END))
-        for pattern in common_patterns:
-            if pattern not in existing:
-                self.include_patterns_listbox.insert(tk.END, pattern)
+    # Structure Comparison Tab Event Handlers
+    def _browse_struct_scan_path(self):
+        """Browse for structure scan path"""
+        path = filedialog.askdirectory(title="Select Directory to Scan", parent=self.dialog)
+        if path:
+            self.struct_scan_path_var.set(path)
     
-    def _add_common_exclude_patterns(self):
-        """Add common exclude patterns"""
-        common_patterns = [
-            "*/tmp/*", "*/temp/*", "*/.git/*", "*/node_modules/*", "*/__pycache__/*",
-            "*.pyc", "*.pyo", "*.class", "*.o", "*.so", "*.dll", "*/cache/*", "*/logs/*.log.*"
-        ]
-        
-        existing = set(self.exclude_patterns_listbox.get(0, tk.END))
-        for pattern in common_patterns:
-            if pattern not in existing:
-                self.exclude_patterns_listbox.insert(tk.END, pattern)
+    def _add_struct_scan_path(self):
+        """Add structure scan path to list"""
+        path = self.struct_scan_path_var.get().strip()
+        if path and path not in self.struct_scan_paths_listbox.get(0, tk.END):
+            self.struct_scan_paths_listbox.insert(tk.END, path)
+            self.struct_scan_path_var.set("")
+    
+    def _remove_struct_scan_path(self):
+        """Remove selected structure scan path"""
+        selection = self.struct_scan_paths_listbox.curselection()
+        if selection:
+            self.struct_scan_paths_listbox.delete(selection[0])
+    
+    def _browse_struct_exclude_path(self):
+        """Browse for structure exclude path"""
+        path = filedialog.askdirectory(title="Select Directory to Exclude", parent=self.dialog)
+        if path:
+            self.struct_exclude_path_var.set(path)
+    
+    def _add_struct_exclude_path(self):
+        """Add structure exclude path to list"""
+        path = self.struct_exclude_path_var.get().strip()
+        if path and path not in self.struct_exclude_paths_listbox.get(0, tk.END):
+            self.struct_exclude_paths_listbox.insert(tk.END, path)
+            self.struct_exclude_path_var.set("")
+    
+    def _remove_struct_exclude_path(self):
+        """Remove selected structure exclude path"""
+        selection = self.struct_exclude_paths_listbox.curselection()
+        if selection:
+            self.struct_exclude_paths_listbox.delete(selection[0])
+    
+    def _add_struct_include_pattern(self):
+        """Add structure include pattern to list"""
+        pattern = self.struct_include_pattern_var.get().strip()
+        if pattern and pattern not in self.struct_include_patterns_listbox.get(0, tk.END):
+            self.struct_include_patterns_listbox.insert(tk.END, pattern)
+            self.struct_include_pattern_var.set("")
+    
+    def _remove_struct_include_pattern(self):
+        """Remove selected structure include pattern"""
+        selection = self.struct_include_patterns_listbox.curselection()
+        if selection:
+            self.struct_include_patterns_listbox.delete(selection[0])
+    
+    def _add_struct_exclude_pattern(self):
+        """Add structure exclude pattern to list"""
+        pattern = self.struct_exclude_pattern_var.get().strip()
+        if pattern and pattern not in self.struct_exclude_patterns_listbox.get(0, tk.END):
+            self.struct_exclude_patterns_listbox.insert(tk.END, pattern)
+            self.struct_exclude_pattern_var.set("")
+    
+    def _remove_struct_exclude_pattern(self):
+        """Remove selected structure exclude pattern"""
+        selection = self.struct_exclude_patterns_listbox.curselection()
+        if selection:
+            self.struct_exclude_patterns_listbox.delete(selection[0])
     
     # File operations
     def _load_from_file(self):

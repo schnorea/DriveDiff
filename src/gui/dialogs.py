@@ -51,9 +51,6 @@ class SettingsDialog:
         # General settings tab
         self._create_general_tab()
         
-        # Ignore patterns tab
-        self._create_ignore_patterns_tab()
-        
         # Appearance tab
         self._create_appearance_tab()
         
@@ -113,43 +110,6 @@ class SettingsDialog:
         ttk.Label(perf_frame, text="Thread pool size for comparison:").pack(anchor="w", padx=5, pady=2)
         self.thread_pool_size = tk.StringVar(value="4")
         ttk.Entry(perf_frame, textvariable=self.thread_pool_size, width=10).pack(anchor="w", padx=5, pady=2)
-    
-    def _create_ignore_patterns_tab(self):
-        """Create ignore patterns tab"""
-        ignore_frame = ttk.Frame(self.notebook)
-        self.notebook.add(ignore_frame, text="Ignore Patterns")
-        
-        ttk.Label(ignore_frame, text="File patterns to ignore during comparison:").pack(anchor="w", pady=5)
-        
-        # Listbox with scrollbar
-        list_frame = ttk.Frame(ignore_frame)
-        list_frame.pack(fill="both", expand=True, pady=5)
-        
-        self.ignore_listbox = tk.Listbox(list_frame)
-        scrollbar = ttk.Scrollbar(list_frame, orient="vertical", command=self.ignore_listbox.yview)
-        self.ignore_listbox.configure(yscrollcommand=scrollbar.set)
-        
-        self.ignore_listbox.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-        
-        # Entry and buttons for adding/removing patterns
-        entry_frame = ttk.Frame(ignore_frame)
-        entry_frame.pack(fill="x", pady=5)
-        
-        self.new_pattern = tk.StringVar()
-        pattern_entry = ttk.Entry(entry_frame, textvariable=self.new_pattern)
-        pattern_entry.pack(side="left", fill="x", expand=True, padx=(0, 5))
-        pattern_entry.bind("<Return>", lambda e: self._add_pattern())
-        
-        ttk.Button(entry_frame, text="Add", command=self._add_pattern).pack(side="right", padx=(0, 5))
-        ttk.Button(entry_frame, text="Remove", command=self._remove_pattern).pack(side="right")
-        
-        # Default patterns
-        default_frame = ttk.Frame(ignore_frame)
-        default_frame.pack(fill="x", pady=5)
-        
-        ttk.Label(default_frame, text="Default patterns:").pack(side="left")
-        ttk.Button(default_frame, text="Add Common", command=self._add_common_patterns).pack(side="right")
     
     def _create_appearance_tab(self):
         """Create appearance settings tab"""
@@ -212,11 +172,6 @@ class SettingsDialog:
         self.max_file_size.set(str(settings.get('max_file_size', 100)))
         self.thread_pool_size.set(str(settings.get('thread_pool_size', 4)))
         
-        # Ignore patterns
-        patterns = settings.get('ignore_patterns', [])
-        for pattern in patterns:
-            self.ignore_listbox.insert(tk.END, pattern)
-        
         # Appearance settings
         self.font_family.set(settings.get('font_family', 'Courier'))
         self.font_size.set(str(settings.get('font_size', 10)))
@@ -224,32 +179,6 @@ class SettingsDialog:
         self.show_line_numbers.set(settings.get('show_line_numbers', False))
         self.word_wrap.set(settings.get('word_wrap', False))
         self.syntax_highlighting.set(settings.get('syntax_highlighting', True))
-    
-    def _add_pattern(self):
-        """Add a new ignore pattern"""
-        pattern = self.new_pattern.get().strip()
-        if pattern and pattern not in self.ignore_listbox.get(0, tk.END):
-            self.ignore_listbox.insert(tk.END, pattern)
-            self.new_pattern.set("")
-    
-    def _remove_pattern(self):
-        """Remove selected ignore pattern"""
-        selection = self.ignore_listbox.curselection()
-        if selection:
-            self.ignore_listbox.delete(selection[0])
-    
-    def _add_common_patterns(self):
-        """Add common ignore patterns"""
-        common_patterns = [
-            "*.tmp", "*.bak", "*.swp", "*~", ".DS_Store", "Thumbs.db",
-            "*.pyc", "*.pyo", "__pycache__", ".git", ".svn", ".hg",
-            "node_modules", "*.log"
-        ]
-        
-        existing = set(self.ignore_listbox.get(0, tk.END))
-        for pattern in common_patterns:
-            if pattern not in existing:
-                self.ignore_listbox.insert(tk.END, pattern)
     
     def _ok_clicked(self):
         """Handle OK button click"""
@@ -284,7 +213,6 @@ class SettingsDialog:
                 'follow_symlinks': self.follow_symlinks.get(),
                 'max_file_size': int(self.max_file_size.get()),
                 'thread_pool_size': int(self.thread_pool_size.get()),
-                'ignore_patterns': list(self.ignore_listbox.get(0, tk.END)),
                 'font_family': self.font_family.get(),
                 'font_size': int(self.font_size.get()),
                 'color_scheme': self.color_scheme.get(),
@@ -348,7 +276,7 @@ Features:
 • Side-by-side directory comparison
 • File content viewing and comparison
 • Multiple export formats (HTML, CSV, JSON, Text)
-• Customizable ignore patterns
+• Dual configuration system with advanced exclusion patterns
 • Cross-platform compatibility
         """
         

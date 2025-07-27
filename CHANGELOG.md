@@ -5,6 +5,67 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2025-07-27
+
+### Added
+- **Dual Configuration System**: Separate configuration sections for Directory vs Structure comparison
+  - Independent scan paths, exclusion patterns, and settings for each comparison type
+  - Dedicated configuration tabs in the configuration dialog
+  - Specialized optimization for different comparison modes
+
+- **Intelligent Mounted Volume Support**: Enhanced path matching for mounted filesystems
+  - Automatic path normalization (e.g., `/Volumes/rootfs/usr/share` matches `/usr/share` exclusions)
+  - Cross-platform mounted volume handling
+  - Smart exclusion pattern matching for mounted paths
+
+- **Enhanced Configuration Dialog**: Completely redesigned configuration interface
+  - 📁 Directory Comparison tab: Full file content comparison settings
+  - 🌳 Structure Comparison tab: Directory structure analysis settings  
+  - ⚡ Performance tab: Threading and optimization controls
+  - 🔧 Advanced tab: Raw YAML editor with validation
+
+- **Configuration Management**: Improved configuration handling
+  - Load/Save configuration files with proper YAML display
+  - Real-time configuration validation
+  - Import/Export configuration presets
+  - Separate performance tuning for each comparison type
+
+### Changed
+- **Configuration Structure**: Migrated from single to dual configuration sections
+  - `directory_comparison` section for full file content analysis
+  - `structure_comparison` section for directory structure analysis
+  - Improved performance settings with per-mode optimization
+
+- **Path Exclusion Logic**: Enhanced exclusion pattern matching
+  - Better handling of complex directory structures
+  - Improved mounted volume path resolution
+  - More intelligent pattern matching algorithms
+
+### Fixed
+- **Configuration Loading**: Fixed issue where "Load Config..." button wasn't updating YAML editor
+- **Path Matching**: Resolved mounted volume exclusion issues for complex paths
+- **Memory Management**: Improved configuration handling to prevent memory leaks
+
+### Removed
+- **Legacy Configuration Support**: Cleaned up legacy configuration patterns
+- **Redundant Test Files**: Organized test structure and removed temporary debug files
+
+## [1.2.0] - 2025-07-27
+
+### Added
+- **Tabbed Interface**: New tabbed UI with dedicated tabs for Content and Structure comparisons
+- **Enhanced Structure Tree**: Specialized color-coded hierarchical tree view for directory structure
+  - Green for added directories
+  - Red for removed directories  
+  - Blue for common directories
+  - Intuitive hierarchical navigation
+  - Interactive legend and summary statistics
+
+### Changed
+- **UI Redesign**: Major interface overhaul with separate tabs for different comparison types
+- **Structure Comparison**: Moved to dedicated tab with specialized visualization
+- **Navigation**: Improved directory structure navigation with expandable tree view
+
 ## [1.1.1] - 2025-07-27
 
 ### Changed

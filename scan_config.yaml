@@ -1,35 +1,164 @@
 logging:
   level: DEBUG
-paths:
-  scan:
-  - /etc
-  exclude:
-  - /proc
-  - /sys
-  - /dev
-  - /run
-  - /tmp
-  - /var/tmp
-  - /var/cache
-  include:
-  - '*.conf'
-  - '*.config'
-  - '*.cfg'
-  - '*.ini'
-  - '*.json'
-  - '*.yaml'
-  - '*.yml'
-  - '*.xml'
-  - '*.txt'
-  - '*.log'
-  exclude_patterns:
-  - '*/tmp/*'
-  - '*/temp/*'
-  - '*/.git/*'
-  - '*/node_modules/*'
-  - '*/__pycache__/*'
-  - '*.pyc'
-  - '*.pyo'
+directory_comparison:
+  paths:
+    scan:
+    - /etc
+    - /usr/local
+    - /home
+    exclude:
+    - /proc
+    - /sys
+    - /dev
+    - /run
+    - /tmp
+    - /var/tmp
+    - /var/cache
+    - /usr/share
+    - /var/lib/docker
+    include:
+    - '*.conf'
+    - '*.config'
+    - '*.cfg'
+    - '*.ini'
+    - '*.json'
+    - '*.yaml'
+    - '*.yml'
+    - '*.xml'
+    - '*.txt'
+    - '*.log'
+    - '*'
+    - '*.*'
+    exclude_patterns:
+    - '*/tmp/*'
+    - tmp
+    - tmp/*
+    - '*/temp/*'
+    - temp
+    - temp/*
+    - '*/.git/*'
+    - .git
+    - .git/*
+    - '*/node_modules/*'
+    - node_modules
+    - node_modules/*
+    - '*/__pycache__/*'
+    - __pycache__
+    - __pycache__/*
+    - '*.pyc'
+    - '*.pyo'
+    - '*/venv/*'
+    - venv
+    - venv/*
+    - '*/env/*'
+    - env
+    - env/*
+    - '*/cache/*'
+    - cache
+    - cache/*
+    - '*/Cache/*'
+    - Cache
+    - Cache/*
+    - '*/usr/share/*'
+    - '*/var/cache/*'
+    - '*/var/tmp/*'
+    - '*/var/lib/docker/*'
+    - '*/proc/*'
+    - '*/sys/*'
+    - '*/dev/*'
+    - '*/run/*'
+    - '*/build/*'
+    - build
+    - build/*
+    - '*/dist/*'
+    - dist
+    - dist/*
+    - '*/target/*'
+    - target
+    - target/*
+    - '*/.vscode/*'
+    - .vscode
+    - .vscode/*
+    - '*/.idea/*'
+    - .idea
+    - .idea/*
+    - '*.swp'
+    - '*~'
+    - .DS_Store
+    - Thumbs.db
+    - desktop.ini
+    - '*/.cache/*'
+    - '*/.config/*'
+    - '*/.docker/*'
+    - '*/.oh-my-zsh/*'
+    - '*/.vscode-server/*'
+    - '*/.dotnet/*'
+    - '*/.local/*'
+structure_comparison:
+  paths:
+    scan: []
+    exclude:
+    - /proc
+    - /sys
+    - /dev
+    - /run
+    - /tmp
+    - /var/tmp
+    - /var/cache
+    - /usr/share
+    - /var/lib/docker
+    - /var/log
+    - /var/spool
+    - /opt
+    - /media
+    - /mnt
+    exclude_patterns:
+    - '*/tmp/*'
+    - tmp
+    - tmp/*
+    - '*/temp/*'
+    - temp
+    - temp/*
+    - '*/.git/*'
+    - .git
+    - .git/*
+    - '*/node_modules/*'
+    - node_modules
+    - node_modules/*
+    - '*/__pycache__/*'
+    - __pycache__
+    - __pycache__/*
+    - '*/venv/*'
+    - venv
+    - venv/*
+    - '*/cache/*'
+    - cache
+    - cache/*
+    - '*/usr/share/*'
+    - '*/var/cache/*'
+    - '*/var/tmp/*'
+    - '*/var/log/*'
+    - '*/var/spool/*'
+    - '*/proc/*'
+    - '*/sys/*'
+    - '*/dev/*'
+    - '*/run/*'
+    - '*/build/*'
+    - build
+    - '*/dist/*'
+    - dist
+    - '*/target/*'
+    - target
+    - '*/media/*'
+    - '*/mnt/*'
+    - '*/opt/*'
+    - '*/.cache/*'
+    - '*/.config/*'
+    - '*/.docker/*'
+    - '*/.oh-my-zsh/*'
+    - '*/.vscode-server/*'
+    - '*/.dotnet/*'
+    - '*/.local/*'
 performance:
   worker_threads: 4
   hash_chunk_size: 65536

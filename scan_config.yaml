@@ -4,8 +4,11 @@ directory_comparison:
   paths:
     scan:
     - /etc
-    - /usr/local
     - /home
+    - /cores
+    - /usr
+    - /softdpac
+    - /var/lib
     exclude:
     - /proc
     - /sys
